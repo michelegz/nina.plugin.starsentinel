@@ -1,4 +1,5 @@
 ﻿using Accord.Statistics.Running;
+using Microsoft.Win32;
 using Newtonsoft.Json;
 using NINA.Equipment.Interfaces.Mediator;
 using NINA.Profile.Interfaces;
@@ -14,6 +15,8 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using NINA.Core.Enum;
+using System.ComponentModel;
 
 namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
     /// <summary>
@@ -29,11 +32,11 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
     /// </summary>
     [ExportMetadata("Name", "Star Count Loop Condition")]
     [ExportMetadata("Description", "This condition is true while StarSentinel detects enough stars")]
-    [ExportMetadata("Icon", "Plugin_Test_SVG")]
+    [ExportMetadata("Icon", "StarSentinel_Icon")]
     [ExportMetadata("Category", "Star Sentinel")]
     [Export(typeof(ISequenceCondition))]
     [JsonObject(MemberSerialization.OptIn)]
-    public class StarCountCondition : SequenceCondition {
+    public class StarCountCondition : SequenceCondition  {
         /// <summary>
         /// The constructor marked with [ImportingConstructor] will be used to import and construct the object
         /// General device interfaces can be added to the constructor parameters and will be automatically injected on instantiation by the plugin loader
@@ -68,63 +71,142 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
 
         protected IProfileService profileService;
         protected IImageSaveMediator imageSaveMediator;
-        protected IImageHistoryVM imageHistoryVM;
-        protected IImageStatisticsVM imageStatisticsVM;
-        protected IImagingMediator imagingMediator;
 
         private readonly Func<object, BeforeImageSavedEventArgs, Task> beforeImageSavedHandler;
 
-        private Queue<int> recentStarCounts;
+        private Queue<int> history;
+
+        private int sampleSize = 5;
+        private int relStarCountThreshold = 20; // percentage
+        private int absStarCountThreshold = 10; // absolute number of stars
+        private bool loopCondition = true;
+        private double averageStarCount;
+        private int relativeStarCount;
+        private int historySize;
 
         [ImportingConstructor]
         public StarCountCondition(
             IProfileService profileService,
-            IImageSaveMediator imageSaveMediator,
-            IImageHistoryVM imageHistoryVM,
-            IImageStatisticsVM imageStatisticsVM,
-            IImagingMediator imagingMediator
+            IImageSaveMediator imageSaveMediator
             )
 
             {
             this.profileService = profileService;
             this.imageSaveMediator = imageSaveMediator;
-            this.imageHistoryVM = imageHistoryVM;
-            this.imageStatisticsVM = imageStatisticsVM; 
-            this.imagingMediator = imagingMediator;
-            this.recentStarCounts = new Queue<int>();
+            this.history = new Queue<int>();
+            this.historySize = sampleSize * 2;
+
+
 
             //this.beforeImageSavedHandler = ImageSaveMediator_BeforeImageSaved;
             this.imageSaveMediator.ImageSaved += OnImageSaved;
+            this.PropertyChanged += PropertyChangeListener;
 
 
-            IsTruthy = true;
+        }
+
+
+        private void PropertyChangeListener(object sender, PropertyChangedEventArgs e) {
+            if (e.PropertyName == "Status") {
+                if (Status == SequenceEntityStatus.DISABLED) {
+                    loopCondition = true;
+                } else if (Status == SequenceEntityStatus.CREATED) {
+                    loopCondition = true;
+                }
+            }
+        }
+
+
+
+        [JsonProperty]
+        public int SampleSize {
+            get => sampleSize;
+            set {
+                sampleSize = Math.Clamp(value, 1, int.MaxValue);
+                this.historySize = sampleSize * 2;
+                RaisePropertyChanged();
+            }
+        }
+
+
+        [JsonProperty]
+        public int RelStarCountThreshold {
+            get => relStarCountThreshold;
+            set {
+                relStarCountThreshold = Math.Clamp(value, 0, 100)    ;
+                RaisePropertyChanged();
+            }
+        }
+
+        [JsonProperty]
+        public int AbsStarCountThreshold {
+            get => absStarCountThreshold;
+            set {
+                absStarCountThreshold = Math.Clamp(value, 0, int.MaxValue) ;
+                RaisePropertyChanged();
+            }
+        }
+
+        [JsonProperty]
+        public String RelativeStarCountText {
+            get {
+
+                if (history.Count >= historySize)
+                    return
+                relativeStarCount.ToString() + "%";
+
+                else return "--";
+
+            }
         }
 
 
         private void OnImageSaved(object sender, ImageSavedEventArgs e) {
-            int starCount = 0;
-
             try {
-                
-                starCount = e.StarDetectionAnalysis.DetectedStars;
-                recentStarCounts.Enqueue(starCount);
+                int starCount = e.StarDetectionAnalysis?.DetectedStars ?? 0;
+
+                history.Enqueue(starCount);
+
+                if (history.Count > historySize)
+                    history.Dequeue();
+
+                if (history.Count < 2 * sampleSize)
+                    return;
+
+                var arr = history.ToArray();
+
+                double avgRecent = arr.Skip(arr.Length - sampleSize).Take(sampleSize).Average();
+                double avgPrev = arr.Skip(arr.Length - 2 * sampleSize).Take(sampleSize).Average();
+
+                if (avgPrev <= 0)
+                    return;
+
+                double relative =  avgRecent/ avgPrev * 100.0;
+
+                relativeStarCount = (int)relative;
+                RaisePropertyChanged(nameof(RelativeStarCountText));
+
+                bool isBad =
+                    relative < relStarCountThreshold ||
+                    avgRecent < absStarCountThreshold;
+
+                loopCondition = !isBad;
+
+                if(isBad) {
+                    // log the event of bad star count here, if needed
+                //    history.Clear();
+                }
 
             } catch {
-
-                starCount = 0;
+                // evita crash silenzioso: meglio loggare in futuro
+                loopCondition = true;
             }
         }
 
 
-        private bool isTruthy;
-
         [JsonProperty]
-        public bool IsTruthy {
-            get => isTruthy;
-            set {
-                isTruthy = value;
-                RaisePropertyChanged();
-            }
+        public bool LoopCondition {
+            get => loopCondition;
         }
 
         /// <summary>
@@ -134,18 +216,13 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
         /// <param name="nextItem"></param>
         /// <returns></returns>
         public override bool Check(ISequenceItem previousItem, ISequenceItem nextItem) {
-            return IsTruthy;
+            return loopCondition;
         }
-
-
 
         public override object Clone() {
             return new StarCountCondition(
                 this.profileService,
-                this.imageSaveMediator,
-                this.imageHistoryVM,
-                this.imageStatisticsVM,
-                this.imagingMediator
+                this.imageSaveMediator
                 ) {
                 Icon = Icon,
                 Name = Name,
@@ -159,7 +236,14 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
         /// </summary>
         /// <returns></returns>
         public override string ToString() {
-            return $"Category: {Category}, Item: {nameof(StarCountCondition)}, IsTruthy: {IsTruthy}";
+            return $"Category: {Category}, Item: {nameof(StarCountCondition)}, Check: {LoopCondition}";
+        }
+
+
+
+
+        public void Dispose() {
+            this.imageSaveMediator.ImageSaved -= OnImageSaved;
         }
     }
 }
