@@ -6,9 +6,11 @@ using System.Runtime.InteropServices;
 [assembly: Guid("f9d39327-6a4d-4f30-b966-0c07b4a6a754")]
 
 // [MANDATORY] The assembly versioning
-//Should be incremented for each new release build of a plugin
-[assembly: AssemblyVersion("1.0.0.1")]
-[assembly: AssemblyFileVersion("1.0.0.1")]
+// OBTAINED FROM GeneratedAssemblyInfo.cs
+// Version format will be Major.Minor.Patch.CommitCount
+
+//[assembly: AssemblyVersion("1.0.0.0")]
+//[assembly: AssemblyFileVersion("1.0.0.0")]
 
 // [MANDATORY] The name of your plugin
 [assembly: AssemblyTitle("Star Sentinel")]
