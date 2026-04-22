@@ -1,8 +1,8 @@
 ﻿<ResourceDictionary
-    x:Class="Michelegz.NINA.StarSentinel.StarSentinelTestCategory.PluginItemTemplate"
+    x:Class="Michelegz.NINA.StarSentinel.StarSentinelCategory.PluginItemTemplate"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:local="clr-namespace:Michelegz.NINA.StarSentinel.StarSentinelTestCategory"
+    xmlns:local="clr-namespace:Michelegz.NINA.StarSentinel.StarSentinelCategory"
     xmlns:mini="clr-namespace:NINA.View.Sequencer.MiniSequencer;assembly=NINA.Sequencer"
     xmlns:nina="clr-namespace:NINA.View.Sequencer;assembly=NINA.Sequencer">
     <!--  This geometrygroup defines a custom SVG to be used with the plugin instruction  -->
@@ -13,43 +13,9 @@
         <PathGeometry Figures="M 498.653,179.5C 494.361,180.625 489.673,181.542 484.59,182.292C 479.507,183.021 474.986,183.396 471.028,183.396C 457.153,183.396 446.59,179.667 439.361,172.188C 432.132,164.729 428.528,152.75 428.528,136.271L 428.528,63.9583L 413.069,63.9583L 413.069,44.7292L 428.528,44.7292L 428.528,5.64583L 451.423,5.64583L 451.423,44.7292L 498.653,44.7292L 498.653,63.9583L 451.423,63.9583L 451.423,125.917C 451.423,133.083 451.569,138.667 451.903,142.667C 452.236,146.688 453.361,150.438 455.319,153.917C 457.111,157.167 459.569,159.542 462.694,161.042C 465.819,162.542 470.569,163.292 476.986,163.292C 480.715,163.292 484.611,162.75 488.673,161.667C 492.715,160.583 495.653,159.667 497.444,158.917L 498.653,158.917L 498.653,179.5 Z " />
     </GeometryGroup>
 
-    <!--  The definition of the plugin test instruction style  -->
-    <!--  The DataType has to be defined as the instruction in context  -->
-    <DataTemplate DataType="{x:Type local:StarSentinelInstruction}">
-        <nina:SequenceBlockView>
-            <nina:SequenceBlockView.SequenceItemContent>
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock VerticalAlignment="Center" Text="Notification Message" />
-                    <TextBox
-                        MinWidth="40"
-                        Margin="5,0,0,0"
-                        Text="{Binding Text}"
-                        TextAlignment="Right" />
-                </StackPanel>
-            </nina:SequenceBlockView.SequenceItemContent>
-        </nina:SequenceBlockView>
-    </DataTemplate>
-
-    <!--  The definition of the test instruction plugin style in the mini format on the imaging tab  -->
-    <!--  The Key has to be defined as the fully qualified instruction name and the "_Mini" postfix  -->
-    <DataTemplate x:Key="Michelegz.NINA.StarSentinel.StarSentinelTestCategory.StarSentinelInstruction_Mini">
-        <mini:MiniSequenceItem>
-            <mini:MiniSequenceItem.SequenceItemContent>
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock
-                        MinWidth="40"
-                        Margin="5,0,0,0"
-                        VerticalAlignment="Center"
-                        Text="{Binding Text}"
-                        TextAlignment="Right" />
-                </StackPanel>
-            </mini:MiniSequenceItem.SequenceItemContent>
-        </mini:MiniSequenceItem>
-    </DataTemplate>
-
     <!--  The definition of the plugin test condition style  -->
     <!--  The DataType has to be defined as the instruction in context  -->
-    <DataTemplate DataType="{x:Type local:StarSentinelCondition}">
+    <DataTemplate DataType="{x:Type local:StarCountCondition}">
         <nina:SequenceBlockView>
             <nina:SequenceBlockView.SequenceItemContent>
                 <StackPanel Orientation="Horizontal">
@@ -67,7 +33,7 @@
 
     <!--  The definition of the test condition plugin style in the mini format on the imaging tab  -->
     <!--  The Key has to be defined as the fully qualified instruction name and the "_Mini" postfix  -->
-    <DataTemplate x:Key="Michelegz.NINA.StarSentinel.StarSentinelTestCategory.StarSentinelCondition_Mini">
+    <DataTemplate x:Key="Michelegz.NINA.StarSentinel.StarSentinelCategory.StarSentinelCondition_Mini">
         <mini:MiniSequenceItem>
             <mini:MiniSequenceItem.SequenceItemContent>
                 <StackPanel Orientation="Horizontal">

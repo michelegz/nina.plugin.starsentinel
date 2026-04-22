@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 
-namespace Michelegz.NINA.StarSentinel.StarSentinelTestCategory {
+namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
     [Export(typeof(ResourceDictionary))]
     public partial class PluginItemTemplate : ResourceDictionary {
         public PluginItemTemplate() {

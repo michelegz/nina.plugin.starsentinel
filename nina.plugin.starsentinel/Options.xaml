@@ -11,10 +11,6 @@
                 <TextBlock Text="Default Notification Message" />
                 <TextBox MinWidth="50" Text="{Binding DefaultNotificationMessage}" />
             </StackPanel>
-            <StackPanel Orientation="Horizontal">
-                <TextBlock Text="Profile Specific Notification Message" />
-                <TextBox MinWidth="50" Text="{Binding ProfileSpecificNotificationMessage}" />
-            </StackPanel>
         </StackPanel>
     </DataTemplate>
 </ResourceDictionary>
