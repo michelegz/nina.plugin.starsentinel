@@ -88,7 +88,7 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
         private int referenceStarCount;
         private int historySize;
         private int badFrames;
-        private int minFramesForAnalysis;
+
         public record ImagingContext(
             string Filter,
             double Exposure,
@@ -121,7 +121,7 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
             this.MaxBadFrames = 10;
             this.RelStarCountThreshold = 20;
             this.AbsStarCountThreshold = 10;
-            this.minFramesForAnalysis = 5;
+
             this.ReferenceStarCount = 0;
             this.imageSaveMediator.ImageSaved += OnImageSaved;
             //this.PropertyChanged += PropertyChangeListener;
@@ -189,7 +189,7 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
         {
             get
             {
-                if (history.Count >= minFramesForAnalysis)
+                if (history.Count >= StarSentinelMediator.Instance.Plugin.InitialSamples)
                 {
                     return RelativeStarCount.ToString() + "%";
                 } else { return "--"; }
@@ -213,7 +213,7 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
         {
             get
             {
-                if (history.Count >= minFramesForAnalysis)
+                if (history.Count >= StarSentinelMediator.Instance.Plugin.InitialSamples)
                 {
                     return ReferenceStarCount.ToString();
                 } else { return "--"; }
@@ -320,9 +320,9 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
                     history.Dequeue();
                 }
 
-                if (history.Count < minFramesForAnalysis)
+                if (history.Count < StarSentinelMediator.Instance.Plugin.InitialSamples)
                 {
-                    Logger.Debug(logPrefix + $" Collecting data... {history.Count}/{minFramesForAnalysis} frames collected for analysis.");
+                    Logger.Debug(logPrefix + $" Collecting data... {history.Count}/{StarSentinelMediator.Instance.Plugin.InitialSamples} frames collected for analysis.");
                     return;
                 }
 
@@ -334,7 +334,7 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
                 }
 
                 //calculate the 80th percentile as reference, to be more robust against outliers than the maximum
-                double percentile = 0.8;
+                double percentile = StarSentinelMediator.Instance.Plugin.ReferencePercentile / 100.0;
                 int index = (int)Math.Floor(percentile * (arr.Length - 1));
                 ReferenceStarCount = arr[index];
 
@@ -429,7 +429,7 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
             // EXPOSURE CHECK (RELATIVE)
             // =========================
 
-            const double exposureTolerancePercent = 10.0; // tuning parameter
+            double exposureTolerancePercent = StarSentinelMediator.Instance.Plugin.ExposureTolerance;
 
             double exposureRatio = (b.Exposure / a.Exposure) * 100.0;
 
@@ -473,7 +473,7 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
             // TOLERANCE (% OF FOV)
             // =========================
 
-            const double fovTolerancePercent = 0.20; // 20%
+            double fovTolerancePercent = StarSentinelMediator.Instance.Plugin.FovTolerance / 100.0;
 
             double threshold = fovDiagonal * fovTolerancePercent;
 

@@ -14,6 +14,23 @@ using Settings = Michelegz.NINA.StarSentinel.Properties.Settings;
 
 namespace Michelegz.NINA.StarSentinel
 {
+
+    // Mediator between plugin class and trigger class
+    public class StarSentinelMediator
+    {
+        private StarSentinelMediator() { }
+
+        private static readonly Lazy<StarSentinelMediator> lazy = new Lazy<StarSentinelMediator>(() => new StarSentinelMediator());
+        public static StarSentinelMediator Instance { get => lazy.Value; }
+        public void RegisterPlugin(StarSentinel plugin)
+        {
+            this.Plugin = plugin;
+        }
+
+        public StarSentinel Plugin { get; private set; }
+    }
+
+
     /// <summary>
     /// This class exports the IPluginManifest interface and will be used for the general plugin information and options
     /// The base class "PluginBase" will populate all the necessary Manifest Meta Data out of the AssemblyInfo attributes. Please fill these accoringly

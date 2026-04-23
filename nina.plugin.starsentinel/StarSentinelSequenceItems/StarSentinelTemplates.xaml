@@ -63,7 +63,7 @@
                         Margin="5,0,0,0"
                         VerticalAlignment="Center"
                         Text="{Binding ReferenceStarCount}"
-                        ToolTip="Reference star count for the current analysis (80 percentile)" />
+                        ToolTip="Reference star count for the current analysis ({Binding ReferencePercentile} percentile)" />
                     <TextBlock VerticalAlignment="Center" Text="Relative star count" />
                     <TextBlock
                         Margin="5,0,0,0"
