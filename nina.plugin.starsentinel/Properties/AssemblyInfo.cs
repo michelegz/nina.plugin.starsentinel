@@ -61,7 +61,11 @@ A frame is considered bad when the relative star count falls below the configure
 
 The analysis ignores non-light frames and resets its history automatically when the imaging context changes (filter, exposure, binning, gain, sensor type, or significant field-of-view shift), so the condition adapts to new targets and exposures.
 
-This plugin is intended as a lightweight safeguard based on image data rather than external sky sensors. It is heuristic by design: star count can be influenced by focus, filters, target density, and seeing conditions, so use it with appropriate thresholds for your setup.")]
+This plugin is intended as a lightweight safeguard based on image data rather than external sky sensors. It is heuristic by design: star count can be influenced by focus, filters, target density, and seeing conditions, so use it with appropriate thresholds for your setup.
+
+⚠️ Important: StarSentinel is a heuristic and cautionary tool. Star count is not a perfect proxy for sky quality and may be affected by seeing conditions, focus accuracy, filters, or target star density. For fully unattended or critical operations, dedicated hardware solutions are still recommended.
+
+")]
 
 // Setting ComVisible to false makes the types in this assembly not visible
 // to COM components.  If you need to access a type in this assembly from
