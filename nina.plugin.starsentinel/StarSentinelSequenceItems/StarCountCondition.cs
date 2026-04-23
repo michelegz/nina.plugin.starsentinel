@@ -20,7 +20,8 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
+namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
+{
     /// <summary>
     /// This Class shows the basic principle on how to add a new Sequence Trigger to the N.I.N.A. sequencer via the plugin interface
     /// For ease of use this class inherits the abstract SequenceTrigger which already handles most of the running logic, like logging, exception handling etc.
@@ -38,7 +39,8 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
     [ExportMetadata("Category", "Star Sentinel")]
     [Export(typeof(ISequenceCondition))]
     [JsonObject(MemberSerialization.OptIn)]
-    public class StarCountCondition : SequenceCondition  {
+    public class StarCountCondition : SequenceCondition
+    {
         /// <summary>
         /// The constructor marked with [ImportingConstructor] will be used to import and construct the object
         /// General device interfaces can be added to the constructor parameters and will be automatically injected on instantiation by the plugin loader
@@ -69,7 +71,7 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
         ///     - IFramingAssistantVM
         ///     - IList<IDateTimeProvider>
         /// </remarks>
-        /// 
+        ///
 
         protected IProfileService profileService;
         protected IImageSaveMediator imageSaveMediator;
@@ -111,7 +113,7 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
             IImageSaveMediator imageSaveMediator
             )
 
-            {
+        {
             this.profileService = profileService;
             this.imageSaveMediator = imageSaveMediator;
             this.history = new Queue<int>();
@@ -123,7 +125,6 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
             this.ReferenceStarCount = 0;
             this.imageSaveMediator.ImageSaved += OnImageSaved;
             //this.PropertyChanged += PropertyChangeListener;
-
         }
 
         /*
@@ -138,60 +139,69 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
         }
         */
 
-
         [JsonProperty]
-        public int MaxBadFrames {
+        public int MaxBadFrames
+        {
             get => maxBadFrames;
-            set {
+            set
+            {
                 maxBadFrames = Math.Clamp(value, 1, int.MaxValue);
                 RaisePropertyChanged();
             }
         }
 
-
         [JsonProperty]
-        public int RelStarCountThreshold {
+        public int RelStarCountThreshold
+        {
             get => relStarCountThreshold;
-            set {
-                relStarCountThreshold = Math.Clamp(value, 0, 100)    ;
+            set
+            {
+                relStarCountThreshold = Math.Clamp(value, 0, 100);
                 RaisePropertyChanged();
             }
         }
 
         [JsonProperty]
-        public int AbsStarCountThreshold {
+        public int AbsStarCountThreshold
+        {
             get => absStarCountThreshold;
-            set {
-                absStarCountThreshold = Math.Clamp(value, 0, int.MaxValue) ;
+            set
+            {
+                absStarCountThreshold = Math.Clamp(value, 0, int.MaxValue);
                 RaisePropertyChanged();
             }
         }
 
-
         [JsonProperty]
-        public int RelativeStarCount {
+        public int RelativeStarCount
+        {
             get => relativeStarCount;
-            private set {
+            private set
+            {
                 relativeStarCount = value;
                 RaisePropertyChanged();
                 RaisePropertyChanged(nameof(RelativeStarCountText));
             }
         }
 
-
         [JsonProperty]
-        public String RelativeStarCountText {
-            get {
+        public String RelativeStarCountText
+        {
+            get
+            {
                 if (history.Count >= minFramesForAnalysis)
+                {
                     return RelativeStarCount.ToString() + "%";
-                else return "--";
+                } else { return "--"; }
             }
         }
 
         [JsonProperty]
-        public int ReferenceStarCount {
+        public int ReferenceStarCount
+        {
             get => referenceStarCount;
-            private set {
+            private set
+            {
                 referenceStarCount = value;
                 RaisePropertyChanged();
                 RaisePropertyChanged(nameof(ReferenceStarCountText));
@@ -199,31 +209,39 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
         }
 
         [JsonProperty]
-        public string ReferenceStarCountText {
-            get {
+        public string ReferenceStarCountText
+        {
+            get
+            {
                 if (history.Count >= minFramesForAnalysis)
+                {
                     return ReferenceStarCount.ToString();
-                else return "--";
+                } else { return "--"; }
             }
         }
 
         [JsonProperty]
-        public int BadFrames {
+        public int BadFrames
+        {
             get => badFrames;
-            private set {
+            private set
+            {
                 badFrames = value;
                 RaisePropertyChanged();
             }
         }
-        private void OnImageSaved(object sender, ImageSavedEventArgs e) {
-            try {
 
+        private void OnImageSaved(object sender, ImageSavedEventArgs e)
+        {
+            try
+            {
                 // Check if the saved image is a light frame, if not skip the analysis
-                if (e.MetaData?.Image?.ImageType != "LIGHT") {
+                if (e.MetaData?.Image?.ImageType != "LIGHT")
+                {
                     Logger.Debug(logPrefix + $" Skipping non-light frame. Image type: {e.MetaData?.Image?.ImageType}");
                     return;
                 }
-                
+
                 // =========================
                 // CONTEXT EXTRACTION
                 // =========================
@@ -233,7 +251,8 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
 
                 ImagingContext? currentContext = null;
 
-                if (coords != null && e.MetaData.Image.ExposureTime > 0 && cam != null) {
+                if (coords != null && e.MetaData.Image.ExposureTime > 0 && cam != null)
+                {
                     double pixelScaleProxy = cam.PixelSize * cam.BinX; // proxy stabile senza focale
 
                     currentContext = new ImagingContext(
@@ -261,10 +280,12 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
                         $"ScaleProxy={currentContext.PixelScaleProxy}"
                     );
 
-                    if (lastContext == null) {
+                    if (lastContext == null)
+                    {
                         lastContext = currentContext;
                         Logger.Info(logPrefix + $" Initial context set.");
-                    } else if (!IsSameContext(lastContext, currentContext)) {
+                    } else if (!IsSameContext(lastContext, currentContext))
+                    {
                         Logger.Info(logPrefix + $" Context change detected -> resetting history.");
 
                         ResetHistory();
@@ -272,17 +293,18 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
 
                         return; // IMPORTANT: skip this frame
                     }
-                } else {
+                } else
+                {
                     Logger.Debug(logPrefix + $" Missing context info (coords/camera/duration), skipping context evaluation.");
                 }
-
 
                 // =========================
                 // Star count analysis
                 // =========================
                 var count = e.StarDetectionAnalysis?.DetectedStars;
 
-                if (count == null) {
+                if (count == null)
+                {
                     Logger.Debug(logPrefix + $" No star detection data available for this image.");
                     return;
                 }
@@ -294,9 +316,12 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
                 history.Enqueue(starCount);
 
                 if (history.Count > historySize)
+                {
                     history.Dequeue();
+                }
 
-                if (history.Count < minFramesForAnalysis) {
+                if (history.Count < minFramesForAnalysis)
+                {
                     Logger.Debug(logPrefix + $" Collecting data... {history.Count}/{minFramesForAnalysis} frames collected for analysis.");
                     return;
                 }
@@ -304,7 +329,9 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
                 var arr = history.OrderBy(x => x).ToArray();
 
                 if (arr.Length < 5)
+                {
                     return;
+                }
 
                 //calculate the 80th percentile as reference, to be more robust against outliers than the maximum
                 double percentile = 0.8;
@@ -314,7 +341,9 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
                 Logger.Debug(logPrefix + $" Calculated reference star count at {percentile * 100} percentile: {ReferenceStarCount}");
 
                 if (ReferenceStarCount <= 0)
+                {
                     return;
+                }
 
                 double relative = ((double)starCount / ReferenceStarCount) * 100.0;
                 relative = Math.Clamp(relative, 0, 1000); //just to prevent extreme outliers
@@ -325,29 +354,33 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
                     relative < RelStarCountThreshold ||
                     starCount < AbsStarCountThreshold;
 
-                if (isBad) {
+                if (isBad)
+                {
                     BadFrames++;
                     Logger.Info(logPrefix + $" Bad frame detected. Star count: {starCount}, Relative star count: {RelativeStarCount}%. Consecutive bad frames: {BadFrames}/{MaxBadFrames}.");
-
-                } else if (BadFrames>0) {
+                } else if (BadFrames > 0)
+                {
                     BadFrames = 0;
-                Logger.Info(logPrefix + $" Good frame detected. Star count: {starCount}, Relative star count: {RelativeStarCount}%. Consecutive bad frames reset to 0.");
+                    Logger.Info(logPrefix + $" Good frame detected. Star count: {starCount}, Relative star count: {RelativeStarCount}%. Consecutive bad frames reset to 0.");
                 }
 
-                if (BadFrames >= MaxBadFrames) {
+                if (BadFrames >= MaxBadFrames)
+                {
                     loopCondition = false;
                     Logger.Info(logPrefix + $" Too many consecutive bad frames detected. Loop condition set to false.");
                     return;
                 }
 
                 loopCondition = true;
-            } catch {
+            } catch
+            {
                 loopCondition = true;
             }
         }
 
         // This method resets the history and related counters when a context change is detected
-        private void ResetHistory() {
+        private void ResetHistory()
+        {
             history.Clear();
             BadFrames = 0;
             ReferenceStarCount = 0;
@@ -355,8 +388,11 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
 
             Logger.Info(logPrefix + $" History reset completed.");
         }
-        private bool IsSameContext(ImagingContext a, ImagingContext b) {
-            if (a == null || b == null) {
+
+        private bool IsSameContext(ImagingContext a, ImagingContext b)
+        {
+            if (a == null || b == null)
+            {
                 Logger.Debug(logPrefix + $" One of the contexts is null, treating as different.");
                 return false;
             }
@@ -365,23 +401,27 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
             // HARDWARE CHECK (strict)
             // =========================
 
-            if (a.Filter != b.Filter) {
+            if (a.Filter != b.Filter)
+            {
                 Logger.Debug(logPrefix + $" Filter mismatch. A={a.Filter}, B={b.Filter}");
                 return false;
             }
 
-            if (a.BinX != b.BinX || a.BinY != b.BinY) {
+            if (a.BinX != b.BinX || a.BinY != b.BinY)
+            {
                 Logger.Debug(logPrefix + $" Binning mismatch. A={a.BinX}x{a.BinY}, B={b.BinX}x{b.BinY}");
                 return false;
             }
 
-            if (a.Gain != b.Gain) {
+            if (a.Gain != b.Gain)
+            {
                 Logger.Debug(logPrefix + $" Gain mismatch. A={a.Gain}, B={b.Gain}");
                 return false;
             }
 
-            if (a.SensorType != b.SensorType) {
-                Logger.Debug(logPrefix + $" Sensor type mismatch. A={a.SensorType}, B={b.SensorType}");    
+            if (a.SensorType != b.SensorType)
+            {
+                Logger.Debug(logPrefix + $" Sensor type mismatch. A={a.SensorType}, B={b.SensorType}");
                 return false;
             }
 
@@ -393,7 +433,8 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
 
             double exposureRatio = (b.Exposure / a.Exposure) * 100.0;
 
-            if (Math.Abs(exposureRatio - 100.0) > exposureTolerancePercent) {
+            if (Math.Abs(exposureRatio - 100.0) > exposureTolerancePercent)
+            {
                 Logger.Debug(
                     logPrefix + $" Exposure mismatch. " +
                     $"A={a.Exposure}s, B={b.Exposure}s, Ratio={exposureRatio:F1}%"
@@ -401,7 +442,6 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
 
                 return false;
             }
-
 
             // =========================
             // SKY SHIFT
@@ -441,7 +481,8 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
             // DECISION
             // =========================
 
-            if (distance > threshold) {
+            if (distance > threshold)
+            {
                 Logger.Debug(
                     logPrefix + $" Context change detected (FOV rule). " +
                     $"Shift={distance:F5}°, Threshold={threshold:F5}° ({fovTolerancePercent * 100}% FOV)"
@@ -453,9 +494,9 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
             return true;
         }
 
-
         [JsonProperty]
-        public bool LoopCondition {
+        public bool LoopCondition
+        {
             get => loopCondition;
         }
 
@@ -465,15 +506,18 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
         /// <param name="previousItem"></param>
         /// <param name="nextItem"></param>
         /// <returns></returns>
-        public override bool Check(ISequenceItem previousItem, ISequenceItem nextItem) {
+        public override bool Check(ISequenceItem previousItem, ISequenceItem nextItem)
+        {
             return loopCondition;
         }
 
-        public override object Clone() {
+        public override object Clone()
+        {
             return new StarCountCondition(
                 this.profileService,
                 this.imageSaveMediator
-                ) {
+                )
+            {
                 Icon = Icon,
                 Name = Name,
                 Category = Category,
@@ -485,14 +529,13 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
         /// This string will be used for logging
         /// </summary>
         /// <returns></returns>
-        public override string ToString() {
+        public override string ToString()
+        {
             return $"Category: {Category}, Item: {nameof(StarCountCondition)}, Check: {LoopCondition}";
         }
 
-
-
-
-        public void Dispose() {
+        public void Dispose()
+        {
             this.imageSaveMediator.ImageSaved -= OnImageSaved;
         }
     }

@@ -39,7 +39,7 @@ dotnet_style_parentheses_in_other_operators = never_if_unnecessary
 dotnet_style_parentheses_in_relational_binary_operators = always_for_clarity:suggestion
 
 # Modifier preferences
-dotnet_style_require_accessibility_modifiers = for_non_interface_members
+dotnet_style_require_accessibility_modifiers = for_non_interface_members:error
 
 # Expression-level preferences
 dotnet_style_coalesce_expression = true
@@ -77,7 +77,7 @@ dotnet_style_allow_statement_immediately_after_block_experimental = true
 # var preferences
 csharp_style_var_elsewhere = false
 csharp_style_var_for_built_in_types = false
-csharp_style_var_when_type_is_apparent = false
+csharp_style_var_when_type_is_apparent = true:suggestion
 
 # Expression-bodied members
 csharp_style_expression_bodied_accessors = true
@@ -104,7 +104,7 @@ csharp_prefer_static_local_function = true
 csharp_preferred_modifier_order = public,private,protected,internal,static,extern,new,virtual,abstract,sealed,override,readonly,unsafe,volatile,async
 
 # Code-block preferences
-csharp_prefer_braces = true
+csharp_prefer_braces = true:error
 csharp_prefer_simple_using_statement = true
 csharp_style_namespace_declarations = block_scoped
 
@@ -137,7 +137,7 @@ csharp_new_line_before_else = false
 csharp_new_line_before_finally = false
 csharp_new_line_before_members_in_anonymous_types = true
 csharp_new_line_before_members_in_object_initializers = true
-csharp_new_line_before_open_brace = none
+csharp_new_line_before_open_brace = all
 csharp_new_line_between_query_expression_clauses = true
 
 # Indentation preferences
@@ -223,3 +223,7 @@ dotnet_style_operator_placement_when_wrapping = beginning_of_line
 tab_width = 4
 indent_size = 4
 end_of_line = crlf
+
+dotnet_diagnostic.IDE0055.severity = warning
+csharp_prefer_simple_using_statement = true:error
+csharp_prefer_static_local_function = true:suggestion

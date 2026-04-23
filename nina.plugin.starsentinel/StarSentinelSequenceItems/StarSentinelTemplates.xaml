@@ -1,18 +1,18 @@
 ﻿<ResourceDictionary
     x:Class="Michelegz.NINA.StarSentinel.StarSentinelCategory.PluginItemTemplate"
-    xmlns:ninactrl="clr-namespace:NINA.CustomControlLibrary;assembly=NINA.CustomControlLibrary"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="clr-namespace:Michelegz.NINA.StarSentinel.StarSentinelCategory"
     xmlns:mini="clr-namespace:NINA.View.Sequencer.MiniSequencer;assembly=NINA.Sequencer"
-    xmlns:nina="clr-namespace:NINA.View.Sequencer;assembly=NINA.Sequencer">
+    xmlns:nina="clr-namespace:NINA.View.Sequencer;assembly=NINA.Sequencer"
+    xmlns:ninactrl="clr-namespace:NINA.CustomControlLibrary;assembly=NINA.CustomControlLibrary">
     <!--  This geometrygroup defines a custom SVG to be used with the plugin instruction  -->
     <GeometryGroup x:Key="StarSentinel_Icon">
-        <!-- Stars -->
+        <!--  Stars  -->
         <PathGeometry Figures="M 4,6 L 5,9 L 8,9 L 5.5,11 L 6.5,14 L 4,12.5 L 1.5,14 L 2.5,11 L 0,9 L 3,9 Z" />
         <PathGeometry Figures="M 14,4 L 15,7 L 18,7 L 15.5,9 L 16.5,12 L 14,10.5 L 11.5,12 L 12.5,9 L 10,7 L 13,7 Z" />
 
-        <!-- Downward trend line -->
+        <!--  Downward trend line  -->
         <PathGeometry Figures="M 3,20 L 10,16 L 16,18 L 21,14" />
     </GeometryGroup>
 
@@ -30,8 +30,7 @@
                             HorizontalAlignment="Right"
                             VerticalAlignment="Center"
                             Text="{Binding MaxBadFrames}"
-                            ToolTip="Number of consecutive images under the threshold before exiting loop"
-                            />
+                            ToolTip="Number of consecutive images under the threshold before exiting loop" />
                     </StackPanel>
                     <StackPanel Orientation="Horizontal">
                         <TextBlock VerticalAlignment="Center" Text="Relative threshold" />
@@ -39,11 +38,10 @@
                             MinWidth="40"
                             Margin="5,0,0,0"
                             VerticalAlignment="Center"
-                            TextAlignment="Right"
                             Text="{Binding RelStarCountThreshold}"
-                            Unit="%" 
+                            TextAlignment="Right"
                             ToolTip="Relative star count threshold, set to 0 to disable relative evaluation"
-                            />
+                            Unit="%" />
                     </StackPanel>
                     <StackPanel Orientation="Horizontal">
                         <TextBlock VerticalAlignment="Center" Text="Absolute threshold" />
@@ -52,13 +50,12 @@
                             Margin="5,0,10,0"
                             HorizontalAlignment="Right"
                             VerticalAlignment="Center"
-                            Text="{Binding AbsStarCountThreshold}" 
-                            ToolTip="Absolute star count threshold, set to 0 to disable absolute evaluation"
-                            />
+                            Text="{Binding AbsStarCountThreshold}"
+                            ToolTip="Absolute star count threshold, set to 0 to disable absolute evaluation" />
                     </StackPanel>
                 </WrapPanel>
             </nina:SequenceBlockView.SequenceItemContent>
-            
+
             <nina:SequenceBlockView.SequenceItemProgressContent>
                 <StackPanel Orientation="Horizontal">
                     <TextBlock VerticalAlignment="Center" Text="Reference star count" />
@@ -66,15 +63,13 @@
                         Margin="5,0,0,0"
                         VerticalAlignment="Center"
                         Text="{Binding ReferenceStarCount}"
-                        ToolTip="Reference star count for the current analysis (80 percentile)"
-                        />
+                        ToolTip="Reference star count for the current analysis (80 percentile)" />
                     <TextBlock VerticalAlignment="Center" Text="Relative star count" />
                     <TextBlock
                         Margin="5,0,0,0"
                         VerticalAlignment="Center"
                         Text="{Binding RelativeStarCountText}"
-                        ToolTip="Last frame percentage of stars compared to reference"
-                        />
+                        ToolTip="Last frame percentage of stars compared to reference" />
                     <TextBlock VerticalAlignment="Center" Text="Bad frames" />
                     <TextBlock
                         Margin="5,0,0,0"
@@ -82,7 +77,6 @@
                         Text="{Binding BadFrames}" />
                 </StackPanel>
             </nina:SequenceBlockView.SequenceItemProgressContent>
-            
         </nina:SequenceBlockView>
     </DataTemplate>
 
