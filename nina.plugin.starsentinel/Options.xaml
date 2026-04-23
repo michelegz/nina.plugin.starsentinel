@@ -24,6 +24,8 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="5"/>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="5"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
                 <!-- Exposure -->
@@ -67,6 +69,18 @@
              Text="{Binding InitialSamples}" 
               ToolTip="Number of initial images to calculate the reference star count"
                          />
+
+
+                <Button
+                    Grid.Row="8"
+                    Margin="0,20,0,0"
+                    Command="{Binding ResetSettings}">
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        Foreground="{StaticResource ButtonForegroundBrush}"
+                        Text="Reset All Settings" />
+                </Button>
+
             </Grid>
         </StackPanel>
     </DataTemplate>

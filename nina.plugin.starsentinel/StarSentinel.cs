@@ -128,6 +128,23 @@ namespace Michelegz.NINA.StarSentinel {
             }
         }
 
+
+        public void ResetSettings() {
+            try {
+                    Properties.Settings.Default.Reset();
+                    CoreUtil.SaveSettings(Properties.Settings.Default);
+                    RaisePropertyChanged(nameof(ExposureTolerance));
+                    RaisePropertyChanged(nameof(FovTolerance));
+                    RaisePropertyChanged(nameof(ReferencePercentile));
+                    RaisePropertyChanged(nameof(InitialSamples));
+
+            } catch (Exception ex) {
+                Logger.Error(ex);
+            }
+
+        }
+
+
     }
 
 
