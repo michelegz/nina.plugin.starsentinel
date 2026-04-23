@@ -15,7 +15,7 @@ using System.Runtime.InteropServices;
 // [MANDATORY] The name of your plugin
 [assembly: AssemblyTitle("Star Sentinel")]
 // [MANDATORY] A short description of your plugin
-[assembly: AssemblyDescription("Monitors star count trends and stops imaging when conditions degrade.")]
+[assembly: AssemblyDescription("Monitors star count in saved light frames and stops the sequencer when a sustained drop indicates degrading imaging conditions.")]
 
 // The following attributes are not required for the plugin per se, but are required by the official manifest meta data
 
@@ -53,15 +53,15 @@ using System.Runtime.InteropServices;
 //[Optional] An additional url to an example example screenshot of your plugin in action
 [assembly: AssemblyMetadata("AltScreenshotURL", "")]
 //[Optional] An in-depth description of your plugin
-[assembly: AssemblyMetadata("LongDescription", @"StarSentinel is a N.I.N.A. plugin that monitors the number of detected stars in your images and helps protect your imaging sessions from degrading sky conditions.
+[assembly: AssemblyMetadata("LongDescription", @"StarSentinel is a N.I.N.A. plugin that monitors the number of detected stars in saved light frames and helps protect imaging sessions from degrading sky conditions.
 
-It provides a Loop Condition for the Advanced Sequencer, allowing sequences to automatically continue only while image quality remains within acceptable limits. When a sustained drop in star count is detected, the loop can stop safely, preventing further acquisition of low-quality data.
+It provides a Loop Condition for the Advanced Sequencer. The plugin keeps a history of recent star counts, calculates the 80th-percentile value as a reference, and evaluates each new frame against both a relative threshold and an absolute star-count threshold.
 
- StarSentinel analyzes star count trends over time using a moving average approach and configurable thresholds. It is designed to be robust against common astrophotography events such as autofocus runs, filter changes, dithering, and target switches.
+A frame is considered bad when the relative star count falls below the configured percentile threshold or when the raw star count is below the configured absolute limit. After a configurable number of consecutive bad frames, the loop condition is set to false and the sequence can stop.
 
-This plugin is intended as a lightweight, software-based safeguard, particularly useful when no dedicated sky monitoring hardware (such as an SQM or all-sky camera) is available. It works entirely from image data and integrates seamlessly into existing Advanced Sequencer workflows.
+The analysis ignores non-light frames and resets its history automatically when the imaging context changes (filter, exposure, binning, gain, sensor type, or significant field-of-view shift), so the condition adapts to new targets and exposures.
 
-⚠️ Important: StarSentinel is a heuristic and cautionary tool. Star count is not a perfect proxy for sky quality and may be affected by seeing conditions, focus accuracy, filters, or target star density. For fully unattended or critical operations, dedicated hardware solutions are still recommended.")]
+This plugin is intended as a lightweight safeguard based on image data rather than external sky sensors. It is heuristic by design: star count can be influenced by focus, filters, target density, and seeing conditions, so use it with appropriate thresholds for your setup.")]
 
 // Setting ComVisible to false makes the types in this assembly not visible
 // to COM components.  If you need to access a type in this assembly from
