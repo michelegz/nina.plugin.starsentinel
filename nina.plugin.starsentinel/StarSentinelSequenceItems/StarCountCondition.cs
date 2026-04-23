@@ -1,23 +1,24 @@
 ﻿using Accord.Statistics.Running;
 using Microsoft.Win32;
 using Newtonsoft.Json;
+using NINA.Core.Enum;
+using NINA.Core.Utility;
 using NINA.Equipment.Interfaces.Mediator;
 using NINA.Profile.Interfaces;
 using NINA.Sequencer.Conditions;
 using NINA.Sequencer.SequenceItem;
+using NINA.Sequencer.SequenceItem.Imaging;
 using NINA.WPF.Base.Interfaces.Mediator;
 using NINA.WPF.Base.Interfaces.ViewModel;
 using NINA.WPF.Base.Mediator;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.ComponentModel.Composition;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
-using NINA.Core.Enum;
-using System.ComponentModel;
-using NINA.Core.Utility;
 
 namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
     /// <summary>
@@ -86,7 +87,22 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
         private int historySize;
         private int badFrames;
         private int minFramesForAnalysis;
-        
+        public record ImagingContext(
+            string Filter,
+            double Exposure,
+            double RA,
+            double Dec,
+            int BinX,
+            int BinY,
+            int Gain,
+            SensorType SensorType,
+            double PixelScaleProxy,
+            int FrameWidthPx,
+            int FrameHeightPx
+        );
+
+        private ImagingContext? lastContext = null;
+
 
         [ImportingConstructor]
         public StarCountCondition(
@@ -198,10 +214,71 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
                 RaisePropertyChanged();
             }
         }
-
         private void OnImageSaved(object sender, ImageSavedEventArgs e) {
             try {
 
+                // Check if the saved image is a light frame, if not skip the analysis
+                if (e.MetaData?.Image?.ImageType != "LIGHT") {
+                    Logger.Debug($"StarSentinel: Skipping non-light frame. Image type: {e.MetaData?.Image?.ImageType}");
+                    return;
+                }
+                
+                // =========================
+                // CONTEXT EXTRACTION
+                // =========================
+
+                var coords = e.MetaData?.Target?.Coordinates;
+                var cam = e.MetaData?.Camera;
+
+                ImagingContext? currentContext = null;
+
+                if (coords != null && e.MetaData.Image.ExposureTime > 0 && cam != null) {
+                    double pixelScaleProxy = cam.PixelSize * cam.BinX; // proxy stabile senza focale
+
+                    currentContext = new ImagingContext(
+                        (e.Filter ?? "Unknown").Trim().ToLowerInvariant(),
+                        Math.Round(e.MetaData.Image.ExposureTime, 2),
+                        Math.Round(coords.RA, 4),
+                        Math.Round(coords.Dec, 4),
+                        cam.BinX,
+                        cam.BinY,
+                        cam.Gain,
+                        cam.SensorType,
+                        pixelScaleProxy,
+                        e.Image.PixelWidth,
+                        e.Image.PixelHeight
+                    );
+
+                    Logger.Debug(
+                        $"StarSentinel: Context -> " +
+                        $"Filter={currentContext.Filter}, " +
+                        $"Exp={currentContext.Exposure}, " +
+                        $"RA={currentContext.RA}, DEC={currentContext.Dec}, " +
+                        $"Bin={currentContext.BinX}x{currentContext.BinY}, " +
+                        $"Gain={currentContext.Gain}, " +
+                        $"Sensor={currentContext.SensorType}, " +
+                        $"ScaleProxy={currentContext.PixelScaleProxy}"
+                    );
+
+                    if (lastContext == null) {
+                        lastContext = currentContext;
+                        Logger.Info("StarSentinel: Initial context set.");
+                    } else if (!IsSameContext(lastContext, currentContext)) {
+                        Logger.Info("StarSentinel: Context change detected -> resetting history.");
+
+                        ResetHistory();
+                        lastContext = currentContext;
+
+                        return; // IMPORTANT: skip this frame
+                    }
+                } else {
+                    Logger.Debug("StarSentinel: Missing context info (coords/camera/duration), skipping context evaluation.");
+                }
+
+
+                // =========================
+                // Star count analysis
+                // =========================
                 var count = e.StarDetectionAnalysis?.DetectedStars;
 
                 if (count == null) {
@@ -266,6 +343,113 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
             } catch {
                 loopCondition = true;
             }
+        }
+
+        // This method resets the history and related counters when a context change is detected
+        private void ResetHistory() {
+            history.Clear();
+            BadFrames = 0;
+            ReferenceStarCount = 0;
+            RelativeStarCount = 0;
+
+            Logger.Info("StarSentinel: History reset completed.");
+        }
+        private bool IsSameContext(ImagingContext a, ImagingContext b) {
+            if (a == null || b == null) {
+                Logger.Debug("StarSentinel: One of the contexts is null, treating as different.");
+                return false;
+            }
+
+            // =========================
+            // HARDWARE CHECK (strict)
+            // =========================
+
+            if (a.Filter != b.Filter) {
+                Logger.Debug($"StarSentinel: Filter mismatch. A={a.Filter}, B={b.Filter}");
+                return false;
+            }
+
+            if (a.BinX != b.BinX || a.BinY != b.BinY) {
+                Logger.Debug($"StarSentinel: Binning mismatch. A={a.BinX}x{a.BinY}, B={b.BinX}x{b.BinY}");
+                return false;
+            }
+
+            if (a.Gain != b.Gain) {
+                Logger.Debug($"StarSentinel: Gain mismatch. A={a.Gain}, B={b.Gain}");
+                return false;
+            }
+
+            if (a.SensorType != b.SensorType) {
+                Logger.Debug($"StarSentinel: Sensor type mismatch. A={a.SensorType}, B={b.SensorType}");    
+                return false;
+            }
+
+            // =========================
+            // EXPOSURE CHECK (RELATIVE)
+            // =========================
+
+            const double exposureTolerancePercent = 10.0; // tuning parameter
+
+            double exposureRatio = (b.Exposure / a.Exposure) * 100.0;
+
+            if (Math.Abs(exposureRatio - 100.0) > exposureTolerancePercent) {
+                Logger.Debug(
+                    $"StarSentinel: Exposure mismatch. " +
+                    $"A={a.Exposure}s, B={b.Exposure}s, Ratio={exposureRatio:F1}%"
+                );
+
+                return false;
+            }
+
+
+            // =========================
+            // SKY SHIFT
+            // =========================
+
+            double deltaRa =
+                (a.RA - b.RA) * Math.Cos(b.Dec * Math.PI / 180.0);
+
+            double deltaDec = a.Dec - b.Dec;
+
+            double distance = Math.Sqrt(deltaRa * deltaRa + deltaDec * deltaDec);
+
+            // =========================
+            // REAL FOV (FROM IMAGE SIZE)
+            // =========================
+
+            // pixel scale (deg/pixel)
+            double pixelScale = a.PixelScaleProxy;
+
+            double fovWidth = pixelScale * a.FrameWidthPx;
+            double fovHeight = pixelScale * a.FrameHeightPx;
+
+            double fovDiagonal = Math.Sqrt(
+                fovWidth * fovWidth +
+                fovHeight * fovHeight
+            );
+
+            // =========================
+            // TOLERANCE (% OF FOV)
+            // =========================
+
+            const double fovTolerancePercent = 0.20; // 20%
+
+            double threshold = fovDiagonal * fovTolerancePercent;
+
+            // =========================
+            // DECISION
+            // =========================
+
+            if (distance > threshold) {
+                Logger.Debug(
+                    $"StarSentinel: Context change detected (FOV rule). " +
+                    $"Shift={distance:F5}°, Threshold={threshold:F5}° ({fovTolerancePercent * 100}% FOV)"
+                );
+
+                return false;
+            }
+
+            return true;
         }
 
 
