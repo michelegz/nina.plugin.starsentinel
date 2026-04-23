@@ -166,7 +166,7 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
         public String RelativeStarCountText {
             get {
                 if (history.Count >= minFramesForAnalysis)
-                    return relativeStarCount.ToString() + "%";
+                    return RelativeStarCount.ToString() + "%";
                 else return "--";
             }
         }
@@ -185,7 +185,7 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
         public string ReferenceStarCountText {
             get {
                 if (history.Count >= minFramesForAnalysis)
-                    return referenceStarCount.ToString();
+                    return ReferenceStarCount.ToString();
                 else return "--";
             }
         }
@@ -231,33 +231,32 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
                 //calculate the 80th percentile as reference, to be more robust against outliers than the maximum
                 double percentile = 0.8;
                 int index = (int)Math.Floor(percentile * (arr.Length - 1));
-                referenceStarCount = arr[index];
-                RaisePropertyChanged(nameof(ReferenceStarCountText));
+                ReferenceStarCount = arr[index];
 
-                Logger.Debug($"StarSentinel: Calculated reference star count at {percentile * 100} percentile: {referenceStarCount}");
+                Logger.Debug($"StarSentinel: Calculated reference star count at {percentile * 100} percentile: {ReferenceStarCount}");
 
-                if (referenceStarCount <= 0)
+                if (ReferenceStarCount <= 0)
                     return;
 
-                double relative = ((double)starCount / referenceStarCount) * 100.0;
+                double relative = ((double)starCount / ReferenceStarCount) * 100.0;
                 relative = Math.Clamp(relative, 0, 1000); //just to prevent extreme outliers
 
                 RelativeStarCount = (int)relative;
 
                 bool isBad =
-                    relative < relStarCountThreshold ||
-                    starCount < absStarCountThreshold;
+                    relative < RelStarCountThreshold ||
+                    starCount < AbsStarCountThreshold;
 
                 if (isBad) {
                     BadFrames++;
-                    Logger.Info($"StarSentinel: Bad frame detected. Star count: {starCount}, Relative star count: {relativeStarCount}%. Consecutive bad frames: {badFrames}/{maxBadFrames}.");
+                    Logger.Info($"StarSentinel: Bad frame detected. Star count: {starCount}, Relative star count: {RelativeStarCount}%. Consecutive bad frames: {BadFrames}/{MaxBadFrames}.");
 
                 } else if (BadFrames>0) {
                     BadFrames = 0;
-                Logger.Info($"StarSentinel: Good frame detected. Star count: {starCount}, Relative star count: {relativeStarCount}%. Consecutive bad frames reset to 0.");
+                Logger.Info($"StarSentinel: Good frame detected. Star count: {starCount}, Relative star count: {RelativeStarCount}%. Consecutive bad frames reset to 0.");
                 }
 
-                if (BadFrames >= maxBadFrames) {
+                if (BadFrames >= MaxBadFrames) {
                     loopCondition = false;
                     Logger.Info("StarSentinel: Too many consecutive bad frames detected. Loop condition set to false.");
                     return;
