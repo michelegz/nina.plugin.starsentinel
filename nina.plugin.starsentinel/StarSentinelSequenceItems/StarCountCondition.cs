@@ -17,6 +17,7 @@ using System.Text;
 using System.Threading.Tasks;
 using NINA.Core.Enum;
 using System.ComponentModel;
+using NINA.Core.Utility;
 
 namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
     /// <summary>
@@ -76,13 +77,16 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
 
         private Queue<int> history;
 
-        private int sampleSize = 5;
-        private int relStarCountThreshold = 20; // percentage
-        private int absStarCountThreshold = 10; // absolute number of stars
+        private int maxBadFrames;
+        private int relStarCountThreshold; // percentage
+        private int absStarCountThreshold; // absolute number of stars
         private bool loopCondition = true;
-        private double averageStarCount;
         private int relativeStarCount;
+        private int referenceStarCount;
         private int historySize;
+        private int badFrames;
+        private int minFramesForAnalysis;
+        
 
         [ImportingConstructor]
         public StarCountCondition(
@@ -94,18 +98,18 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
             this.profileService = profileService;
             this.imageSaveMediator = imageSaveMediator;
             this.history = new Queue<int>();
-            this.historySize = sampleSize * 2;
-
-
-
-            //this.beforeImageSavedHandler = ImageSaveMediator_BeforeImageSaved;
+            this.historySize = 1000; // for now it is used just to limit the memory usage
+            this.MaxBadFrames = 10;
+            this.RelStarCountThreshold = 20;
+            this.AbsStarCountThreshold = 10;
+            this.minFramesForAnalysis = 5;
+            this.ReferenceStarCount = 0;
             this.imageSaveMediator.ImageSaved += OnImageSaved;
-            this.PropertyChanged += PropertyChangeListener;
-
+            //this.PropertyChanged += PropertyChangeListener;
 
         }
 
-
+        /*
         private void PropertyChangeListener(object sender, PropertyChangedEventArgs e) {
             if (e.PropertyName == "Status") {
                 if (Status == SequenceEntityStatus.DISABLED) {
@@ -115,15 +119,14 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
                 }
             }
         }
-
+        */
 
 
         [JsonProperty]
-        public int SampleSize {
-            get => sampleSize;
+        public int MaxBadFrames {
+            get => maxBadFrames;
             set {
-                sampleSize = Math.Clamp(value, 1, int.MaxValue);
-                this.historySize = sampleSize * 2;
+                maxBadFrames = Math.Clamp(value, 1, int.MaxValue);
                 RaisePropertyChanged();
             }
         }
@@ -147,58 +150,121 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
             }
         }
 
+
         [JsonProperty]
-        public String RelativeStarCountText {
-            get {
-
-                if (history.Count >= historySize)
-                    return
-                relativeStarCount.ToString() + "%";
-
-                else return "--";
-
+        public int RelativeStarCount {
+            get => relativeStarCount;
+            private set {
+                relativeStarCount = value;
+                RaisePropertyChanged();
+                RaisePropertyChanged(nameof(RelativeStarCountText));
             }
         }
 
 
+        [JsonProperty]
+        public String RelativeStarCountText {
+            get {
+                if (history.Count >= minFramesForAnalysis)
+                    return relativeStarCount.ToString() + "%";
+                else return "--";
+            }
+        }
+
+        [JsonProperty]
+        public int ReferenceStarCount {
+            get => referenceStarCount;
+            private set {
+                referenceStarCount = value;
+                RaisePropertyChanged();
+                RaisePropertyChanged(nameof(ReferenceStarCountText));
+            }
+        }
+
+        [JsonProperty]
+        public string ReferenceStarCountText {
+            get {
+                if (history.Count >= minFramesForAnalysis)
+                    return referenceStarCount.ToString();
+                else return "--";
+            }
+        }
+
+        [JsonProperty]
+        public int BadFrames {
+            get => badFrames;
+            private set {
+                badFrames = value;
+                RaisePropertyChanged();
+            }
+        }
+
         private void OnImageSaved(object sender, ImageSavedEventArgs e) {
             try {
-                int starCount = e.StarDetectionAnalysis?.DetectedStars ?? 0;
+
+                var count = e.StarDetectionAnalysis?.DetectedStars;
+
+                if (count == null) {
+                    Logger.Debug("StarSentinel: No star detection data available for this image.");
+                    return;
+                }
+
+                int starCount = count.Value;
+
+                Logger.Debug("StarSentinel: Detected star count for saved image: " + starCount);
 
                 history.Enqueue(starCount);
 
                 if (history.Count > historySize)
                     history.Dequeue();
 
-                if (history.Count < 2 * sampleSize)
+                if (history.Count < minFramesForAnalysis) {
+                    Logger.Debug($"StarSentinel: Collecting data... {history.Count}/{minFramesForAnalysis} frames collected for analysis.");
+                    return;
+                }
+
+                var arr = history.OrderBy(x => x).ToArray();
+
+                if (arr.Length < 5)
                     return;
 
-                var arr = history.ToArray();
+                //calculate the 80th percentile as reference, to be more robust against outliers than the maximum
+                double percentile = 0.8;
+                int index = (int)Math.Floor(percentile * (arr.Length - 1));
+                referenceStarCount = arr[index];
+                RaisePropertyChanged(nameof(ReferenceStarCountText));
 
-                double avgRecent = arr.Skip(arr.Length - sampleSize).Take(sampleSize).Average();
-                double avgPrev = arr.Skip(arr.Length - 2 * sampleSize).Take(sampleSize).Average();
+                Logger.Debug($"StarSentinel: Calculated reference star count at {percentile * 100} percentile: {referenceStarCount}");
 
-                if (avgPrev <= 0)
+                if (referenceStarCount <= 0)
                     return;
 
-                double relative =  avgRecent/ avgPrev * 100.0;
+                double relative = ((double)starCount / referenceStarCount) * 100.0;
+                relative = Math.Clamp(relative, 0, 1000); //just to prevent extreme outliers
 
-                relativeStarCount = (int)relative;
-                RaisePropertyChanged(nameof(RelativeStarCountText));
+                RelativeStarCount = (int)relative;
 
                 bool isBad =
                     relative < relStarCountThreshold ||
-                    avgRecent < absStarCountThreshold;
+                    starCount < absStarCountThreshold;
 
-                loopCondition = !isBad;
+                if (isBad) {
+                    BadFrames++;
+                    Logger.Info($"StarSentinel: Bad frame detected. Star count: {starCount}, Relative star count: {relativeStarCount}%. Consecutive bad frames: {badFrames}/{maxBadFrames}.");
 
-                if(isBad) {
-                    // log the event of bad star count here, if needed
-                //    history.Clear();
+                } else if (BadFrames>0) {
+                    BadFrames = 0;
+                Logger.Info($"StarSentinel: Good frame detected. Star count: {starCount}, Relative star count: {relativeStarCount}%. Consecutive bad frames reset to 0.");
                 }
 
+                if (BadFrames >= maxBadFrames) {
+                    loopCondition = false;
+                    Logger.Info("StarSentinel: Too many consecutive bad frames detected. Loop condition set to false.");
+                    return;
+                }
+
+                loopCondition = true;
             } catch {
-                // evita crash silenzioso: meglio loggare in futuro
                 loopCondition = true;
             }
         }

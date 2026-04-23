@@ -23,14 +23,14 @@
             <nina:SequenceBlockView.SequenceItemContent>
                 <WrapPanel Orientation="Horizontal">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock VerticalAlignment="Center" Text="Sample size" />
+                        <TextBlock VerticalAlignment="Center" Text="Max bad frames" />
                         <TextBox
                             MinWidth="40"
                             Margin="5,0,10,0"
                             HorizontalAlignment="Right"
                             VerticalAlignment="Center"
-                            Text="{Binding SampleSize}"
-                            ToolTip="Number of images under the threshold before exit loop"
+                            Text="{Binding MaxBadFrames}"
+                            ToolTip="Number of consecutive images under the threshold before exiting loop"
                             />
                     </StackPanel>
                     <StackPanel Orientation="Horizontal">
@@ -61,11 +61,25 @@
             
             <nina:SequenceBlockView.SequenceItemProgressContent>
                 <StackPanel Orientation="Horizontal">
+                    <TextBlock VerticalAlignment="Center" Text="Reference star count" />
+                    <TextBlock
+                        Margin="5,0,0,0"
+                        VerticalAlignment="Center"
+                        Text="{Binding ReferenceStarCount}"
+                        ToolTip="Reference star count for the current analysis (80 percentile)"
+                        />
                     <TextBlock VerticalAlignment="Center" Text="Relative star count" />
                     <TextBlock
                         Margin="5,0,0,0"
                         VerticalAlignment="Center"
-                        Text="{Binding RelativeStarCountText}" />
+                        Text="{Binding RelativeStarCountText}"
+                        ToolTip="Last frame percentage of stars compared to reference"
+                        />
+                    <TextBlock VerticalAlignment="Center" Text="Bad frames" />
+                    <TextBlock
+                        Margin="5,0,0,0"
+                        VerticalAlignment="Center"
+                        Text="{Binding BadFrames}" />
                 </StackPanel>
             </nina:SequenceBlockView.SequenceItemProgressContent>
             
@@ -78,11 +92,11 @@
         <mini:MiniSequenceItem>
             <mini:MiniSequenceItem.SequenceItemContent>
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock VerticalAlignment="Center" Text="Relative star count" />
+                    <TextBlock VerticalAlignment="Center" Text="Bad Frames" />
                     <TextBlock
                         Margin="5,0,0,0"
                         VerticalAlignment="Center"
-                        Text="{Binding RelativeStarCountText}" />
+                        Text="{Binding BadFrames}" />
                 </StackPanel>
             </mini:MiniSequenceItem.SequenceItemContent>
         </mini:MiniSequenceItem>
