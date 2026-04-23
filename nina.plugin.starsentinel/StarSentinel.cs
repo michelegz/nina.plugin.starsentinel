@@ -1,4 +1,5 @@
 ﻿using Michelegz.NINA.StarSentinel.Properties;
+using Namotion.Reflection;
 using NINA.Core.Model;
 using NINA.Core.Utility;
 using NINA.Image.ImageData;
@@ -56,5 +57,78 @@ namespace Michelegz.NINA.StarSentinel {
         protected void RaisePropertyChanged([CallerMemberName] string propertyName = null) {
             this.PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
+
+
+        public uint ExposureTolerance {
+            get {
+                uint exposureTolerance;
+                if (!profileService.ActiveProfile.PluginSettings.TryGetValue(Guid.Parse(this.Identifier), nameof(ExposureTolerance), out exposureTolerance)) {
+                    exposureTolerance = Properties.Settings.Default.ExposureTolerance;
+                    pluginSettings.SetValueUInt32(nameof(ExposureTolerance), exposureTolerance);
+                }
+                return exposureTolerance;
+            }
+            set {
+                if (ExposureTolerance != value) {
+                    pluginSettings.SetValueUInt32(nameof(ExposureTolerance), Math.Clamp(value, 0, 100));
+                    RaisePropertyChanged();
+                }
+            }
+        }
+
+        public uint FovTolerance {
+            get {
+                uint fovTolerance;
+                if (!profileService.ActiveProfile.PluginSettings.TryGetValue(Guid.Parse(this.Identifier), nameof(FovTolerance), out fovTolerance)) {
+                    fovTolerance = Properties.Settings.Default.FovTolerance;
+                    pluginSettings.SetValueUInt32(nameof(FovTolerance), fovTolerance);
+                }
+                return fovTolerance;
+            }
+            set {
+                if (FovTolerance != value) {
+                    pluginSettings.SetValueUInt32(nameof(FovTolerance), Math.Clamp(value, 0, 100));
+                    RaisePropertyChanged();
+                }
+            }
+        }
+
+
+        public uint ReferencePercentile {
+            get {
+                uint referencePercentile;
+                if (!profileService.ActiveProfile.PluginSettings.TryGetValue(Guid.Parse(this.Identifier), nameof(ReferencePercentile), out referencePercentile)) {
+                    referencePercentile = Properties.Settings.Default.ReferencePercentile;
+                    pluginSettings.SetValueUInt32(nameof(ReferencePercentile), referencePercentile);
+                }
+                return referencePercentile;
+            }
+            set {
+                if (ReferencePercentile != value) {
+                    pluginSettings.SetValueUInt32(nameof(ReferencePercentile), Math.Clamp(value, 0, 100));
+                    RaisePropertyChanged();
+                }
+            }
+        }
+
+        public uint InitialSamples {
+            get {
+                uint initialSamples;
+                if (!profileService.ActiveProfile.PluginSettings.TryGetValue(Guid.Parse(this.Identifier), nameof(InitialSamples), out initialSamples)) {
+                    initialSamples = Properties.Settings.Default.InitialSamples;
+                    pluginSettings.SetValueUInt32(nameof(InitialSamples), initialSamples);
+                }
+                return initialSamples;
+            }
+            set {
+                if (InitialSamples != value) {
+                    pluginSettings.SetValueUInt32(nameof(InitialSamples), Math.Clamp(value, 1, 50));
+                    RaisePropertyChanged();
+                }
+            }
+        }
+
     }
+
+
 }

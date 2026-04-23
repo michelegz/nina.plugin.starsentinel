@@ -8,8 +8,20 @@
     <DataTemplate x:Key="Star Sentinel_Options">
         <StackPanel Orientation="Vertical">
             <StackPanel Orientation="Horizontal">
-                <TextBlock Text="Default Notification Message" />
-                <TextBox MinWidth="50" Text="{Binding DefaultNotificationMessage}" />
+                <TextBlock Text="Exposure tolerance" />
+                <TextBox MinWidth="50" Text="{Binding ExposureTolerance}" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="Fov tolerance" />
+                <TextBox MinWidth="50" Text="{Binding FovTolerance}" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="Star count reference percentile" />
+                <TextBox MinWidth="50" Text="{Binding ReferencePercentile}" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="Initial samples" />
+                <TextBox MinWidth="50" Text="{Binding InitialSamples}" />
             </StackPanel>
         </StackPanel>
     </DataTemplate>

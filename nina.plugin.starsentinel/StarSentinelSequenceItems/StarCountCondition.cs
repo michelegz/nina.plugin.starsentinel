@@ -103,6 +103,7 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
 
         private ImagingContext? lastContext = null;
 
+        private const String logPrefix = "StarSentinel: ";
 
         [ImportingConstructor]
         public StarCountCondition(
@@ -219,7 +220,7 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
 
                 // Check if the saved image is a light frame, if not skip the analysis
                 if (e.MetaData?.Image?.ImageType != "LIGHT") {
-                    Logger.Debug($"StarSentinel: Skipping non-light frame. Image type: {e.MetaData?.Image?.ImageType}");
+                    Logger.Debug(logPrefix + $" Skipping non-light frame. Image type: {e.MetaData?.Image?.ImageType}");
                     return;
                 }
                 
@@ -250,7 +251,7 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
                     );
 
                     Logger.Debug(
-                        $"StarSentinel: Context -> " +
+                        logPrefix + $" Context -> " +
                         $"Filter={currentContext.Filter}, " +
                         $"Exp={currentContext.Exposure}, " +
                         $"RA={currentContext.RA}, DEC={currentContext.Dec}, " +
@@ -262,9 +263,9 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
 
                     if (lastContext == null) {
                         lastContext = currentContext;
-                        Logger.Info("StarSentinel: Initial context set.");
+                        Logger.Info(logPrefix + $" Initial context set.");
                     } else if (!IsSameContext(lastContext, currentContext)) {
-                        Logger.Info("StarSentinel: Context change detected -> resetting history.");
+                        Logger.Info(logPrefix + $" Context change detected -> resetting history.");
 
                         ResetHistory();
                         lastContext = currentContext;
@@ -272,7 +273,7 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
                         return; // IMPORTANT: skip this frame
                     }
                 } else {
-                    Logger.Debug("StarSentinel: Missing context info (coords/camera/duration), skipping context evaluation.");
+                    Logger.Debug(logPrefix + $" Missing context info (coords/camera/duration), skipping context evaluation.");
                 }
 
 
@@ -282,13 +283,13 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
                 var count = e.StarDetectionAnalysis?.DetectedStars;
 
                 if (count == null) {
-                    Logger.Debug("StarSentinel: No star detection data available for this image.");
+                    Logger.Debug(logPrefix + $" No star detection data available for this image.");
                     return;
                 }
 
                 int starCount = count.Value;
 
-                Logger.Debug("StarSentinel: Detected star count for saved image: " + starCount);
+                Logger.Debug(logPrefix + $" Detected star count for saved image: " + starCount);
 
                 history.Enqueue(starCount);
 
@@ -296,7 +297,7 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
                     history.Dequeue();
 
                 if (history.Count < minFramesForAnalysis) {
-                    Logger.Debug($"StarSentinel: Collecting data... {history.Count}/{minFramesForAnalysis} frames collected for analysis.");
+                    Logger.Debug(logPrefix + $" Collecting data... {history.Count}/{minFramesForAnalysis} frames collected for analysis.");
                     return;
                 }
 
@@ -310,7 +311,7 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
                 int index = (int)Math.Floor(percentile * (arr.Length - 1));
                 ReferenceStarCount = arr[index];
 
-                Logger.Debug($"StarSentinel: Calculated reference star count at {percentile * 100} percentile: {ReferenceStarCount}");
+                Logger.Debug(logPrefix + $" Calculated reference star count at {percentile * 100} percentile: {ReferenceStarCount}");
 
                 if (ReferenceStarCount <= 0)
                     return;
@@ -326,16 +327,16 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
 
                 if (isBad) {
                     BadFrames++;
-                    Logger.Info($"StarSentinel: Bad frame detected. Star count: {starCount}, Relative star count: {RelativeStarCount}%. Consecutive bad frames: {BadFrames}/{MaxBadFrames}.");
+                    Logger.Info(logPrefix + $" Bad frame detected. Star count: {starCount}, Relative star count: {RelativeStarCount}%. Consecutive bad frames: {BadFrames}/{MaxBadFrames}.");
 
                 } else if (BadFrames>0) {
                     BadFrames = 0;
-                Logger.Info($"StarSentinel: Good frame detected. Star count: {starCount}, Relative star count: {RelativeStarCount}%. Consecutive bad frames reset to 0.");
+                Logger.Info(logPrefix + $" Good frame detected. Star count: {starCount}, Relative star count: {RelativeStarCount}%. Consecutive bad frames reset to 0.");
                 }
 
                 if (BadFrames >= MaxBadFrames) {
                     loopCondition = false;
-                    Logger.Info("StarSentinel: Too many consecutive bad frames detected. Loop condition set to false.");
+                    Logger.Info(logPrefix + $" Too many consecutive bad frames detected. Loop condition set to false.");
                     return;
                 }
 
@@ -352,11 +353,11 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
             ReferenceStarCount = 0;
             RelativeStarCount = 0;
 
-            Logger.Info("StarSentinel: History reset completed.");
+            Logger.Info(logPrefix + $" History reset completed.");
         }
         private bool IsSameContext(ImagingContext a, ImagingContext b) {
             if (a == null || b == null) {
-                Logger.Debug("StarSentinel: One of the contexts is null, treating as different.");
+                Logger.Debug(logPrefix + $" One of the contexts is null, treating as different.");
                 return false;
             }
 
@@ -365,22 +366,22 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
             // =========================
 
             if (a.Filter != b.Filter) {
-                Logger.Debug($"StarSentinel: Filter mismatch. A={a.Filter}, B={b.Filter}");
+                Logger.Debug(logPrefix + $" Filter mismatch. A={a.Filter}, B={b.Filter}");
                 return false;
             }
 
             if (a.BinX != b.BinX || a.BinY != b.BinY) {
-                Logger.Debug($"StarSentinel: Binning mismatch. A={a.BinX}x{a.BinY}, B={b.BinX}x{b.BinY}");
+                Logger.Debug(logPrefix + $" Binning mismatch. A={a.BinX}x{a.BinY}, B={b.BinX}x{b.BinY}");
                 return false;
             }
 
             if (a.Gain != b.Gain) {
-                Logger.Debug($"StarSentinel: Gain mismatch. A={a.Gain}, B={b.Gain}");
+                Logger.Debug(logPrefix + $" Gain mismatch. A={a.Gain}, B={b.Gain}");
                 return false;
             }
 
             if (a.SensorType != b.SensorType) {
-                Logger.Debug($"StarSentinel: Sensor type mismatch. A={a.SensorType}, B={b.SensorType}");    
+                Logger.Debug(logPrefix + $" Sensor type mismatch. A={a.SensorType}, B={b.SensorType}");    
                 return false;
             }
 
@@ -394,7 +395,7 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
 
             if (Math.Abs(exposureRatio - 100.0) > exposureTolerancePercent) {
                 Logger.Debug(
-                    $"StarSentinel: Exposure mismatch. " +
+                    logPrefix + $" Exposure mismatch. " +
                     $"A={a.Exposure}s, B={b.Exposure}s, Ratio={exposureRatio:F1}%"
                 );
 
@@ -442,7 +443,7 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory {
 
             if (distance > threshold) {
                 Logger.Debug(
-                    $"StarSentinel: Context change detected (FOV rule). " +
+                    logPrefix + $" Context change detected (FOV rule). " +
                     $"Shift={distance:F5}°, Threshold={threshold:F5}° ({fovTolerancePercent * 100}% FOV)"
                 );
 

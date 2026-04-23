@@ -25,6 +25,54 @@ namespace Michelegz.NINA.StarSentinel.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("10")]
+        public uint ExposureTolerance {
+            get {
+                return ((uint)(this["ExposureTolerance"]));
+            }
+            set {
+                this["ExposureTolerance"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("20")]
+        public uint FovTolerance {
+            get {
+                return ((uint)(this["FovTolerance"]));
+            }
+            set {
+                this["FovTolerance"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("80")]
+        public uint ReferencePercentile {
+            get {
+                return ((uint)(this["ReferencePercentile"]));
+            }
+            set {
+                this["ReferencePercentile"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("5")]
+        public uint InitialSamples {
+            get {
+                return ((uint)(this["InitialSamples"]));
+            }
+            set {
+                this["InitialSamples"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
         public bool UpdateSettings {
             get {
