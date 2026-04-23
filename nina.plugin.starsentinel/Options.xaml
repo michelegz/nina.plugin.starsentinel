@@ -74,7 +74,7 @@
                 <Button
                     Grid.Row="8"
                     Margin="0,20,0,0"
-                    Command="{Binding ResetSettings}">
+                    Command="{Binding ResetSettingsCommand}">
                     <TextBlock
                         VerticalAlignment="Center"
                         Foreground="{StaticResource ButtonForegroundBrush}"

@@ -17,6 +17,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Input;
 using Settings = Michelegz.NINA.StarSentinel.Properties.Settings;
 
 namespace Michelegz.NINA.StarSentinel {
@@ -31,6 +32,7 @@ namespace Michelegz.NINA.StarSentinel {
     public class StarSentinel : PluginBase, INotifyPropertyChanged {
         private readonly IPluginOptionsAccessor pluginSettings;
         private readonly IProfileService profileService;
+        private ICommand resetSettingsCommand;
 
         [ImportingConstructor]
         
@@ -129,6 +131,8 @@ namespace Michelegz.NINA.StarSentinel {
         }
 
 
+        public ICommand ResetSettingsCommand => resetSettingsCommand ??= new DelegateCommand(_ => ResetSettings());
+
         public void ResetSettings() {
             try {
                     Properties.Settings.Default.Reset();
@@ -144,6 +148,24 @@ namespace Michelegz.NINA.StarSentinel {
 
         }
 
+        private class DelegateCommand : ICommand {
+            private readonly Action<object> execute;
+            private readonly Func<object, bool> canExecute;
+
+            public DelegateCommand(Action<object> execute, Func<object, bool> canExecute = null) {
+                this.execute = execute ?? throw new ArgumentNullException(nameof(execute));
+                this.canExecute = canExecute;
+            }
+
+            public bool CanExecute(object parameter) => canExecute?.Invoke(parameter) ?? true;
+
+            public void Execute(object parameter) => execute(parameter);
+
+            public event EventHandler CanExecuteChanged {
+                add { CommandManager.RequerySuggested += value; }
+                remove { CommandManager.RequerySuggested -= value; }
+            }
+        }
 
     }
 
