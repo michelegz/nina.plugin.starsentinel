@@ -137,6 +137,12 @@ namespace Michelegz.NINA.StarSentinel {
             try {
                     Properties.Settings.Default.Reset();
                     CoreUtil.SaveSettings(Properties.Settings.Default);
+
+                    pluginSettings.SetValueUInt32(nameof(ExposureTolerance), Properties.Settings.Default.ExposureTolerance);
+                    pluginSettings.SetValueUInt32(nameof(FovTolerance), Properties.Settings.Default.FovTolerance);
+                    pluginSettings.SetValueUInt32(nameof(ReferencePercentile), Properties.Settings.Default.ReferencePercentile);
+                    pluginSettings.SetValueUInt32(nameof(InitialSamples), Properties.Settings.Default.InitialSamples);
+
                     RaisePropertyChanged(nameof(ExposureTolerance));
                     RaisePropertyChanged(nameof(FovTolerance));
                     RaisePropertyChanged(nameof(ReferencePercentile));
