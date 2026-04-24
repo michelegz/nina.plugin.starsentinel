@@ -68,9 +68,10 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
         private readonly IProfileService profileService;
         private readonly IImageSaveMediator imageSaveMediator;
 
-        // Keep a fixed reference to the event handler to ensure 
+        // Keep a fixed reference to the event handler to ensure
         // that Unsubscribe (-=) target exactly the same delegate instance as Subscribe (+=).
         private readonly EventHandler<ImageSavedEventArgs> imageSavedHandler;
+
         private bool isSubscribed = false;
 
         private int maxBadFrames;
@@ -126,9 +127,9 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
 
         private void PropertyChangeListener(object sender, PropertyChangedEventArgs e)
         {
-            //If the user disables the condition in the N.I.N.A. UI, 
+            //If the user disables the condition in the N.I.N.A. UI,
             // we must immediately detach the event to prevent background processing.
-            
+
             if (e.PropertyName == "Status" && Status == SequenceEntityStatus.DISABLED)
             {
                 Unsubscribe();
@@ -137,7 +138,7 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
 
         public override bool Check(ISequenceItem previousItem, ISequenceItem nextItem)
         {
-            /* * Lazy Subscription: We subscribe only when the sequencer actually 
+            /* * Lazy Subscription: We subscribe only when the sequencer actually
              * evaluates this condition. This avoids UI clones from subscribing.
              */
             if (!isSubscribed)
@@ -173,7 +174,6 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
             // Essential cleanup when the item is removed from the sequencer
             Unsubscribe();
             this.PropertyChanged -= PropertyChangeListener;
-
         }
 
         public StarCountCondition(StarCountCondition copyMe)
@@ -187,13 +187,12 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
 
         public override object Clone()
         {
-            /* * When N.I.N.A. clones the object for the UI, the new instance 
-             * starts with isSubscribed = false. It will only subscribe if it's 
+            /* * When N.I.N.A. clones the object for the UI, the new instance
+             * starts with isSubscribed = false. It will only subscribe if it's
              * actually executed in a sequence.
              */
             return new StarCountCondition(this);
         }
-
 
         [JsonProperty]
         public int MaxBadFrames
@@ -356,13 +355,11 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
                             {
                                 matchedState = activeEntry.State;
                                 Logger.Debug(logPrefix + $" Active context matched at index {activeIndex}.");
-                            }
-                            else
+                            } else
                             {
                                 Logger.Debug(logPrefix + $" Active context did not match at index {activeIndex}.");
                             }
-                        }
-                        else
+                        } else
                         {
                             Logger.Debug(logPrefix + " Current active state is not present in stored contexts.");
                         }
@@ -386,8 +383,7 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
                     {
                         currentState = matchedState;
                         RaisePropertyChanged(nameof(BadFrames));
-                    }
-                    else
+                    } else
                     {
                         var newState = new ContextState();
                         contexts.Add((currentContext, newState));
@@ -646,7 +642,6 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
             get => loopCondition;
         }
 
- 
         /// <summary>
         /// This string will be used for logging
         /// </summary>
