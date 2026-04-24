@@ -10,7 +10,6 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.Composition;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
 {
@@ -368,8 +367,8 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
                     if (matchedState == null)
                     {
                         Logger.Debug(logPrefix + $" Searching {contexts.Count} existing contexts for a match.");
-                        int j;
-                        for (j = 0; j < contexts.Count; j++)
+
+                        for (int j = 0; j < contexts.Count; j++)
                         {
                             if (IsSameContext(contexts[j].Context, currentContext))
                             {
