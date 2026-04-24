@@ -244,7 +244,7 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
                 return $"{ReferenceStarCount}%";
             }
         }
-        }
+        
 
         [JsonProperty]
         public int BadFrames
