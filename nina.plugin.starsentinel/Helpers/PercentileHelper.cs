@@ -35,12 +35,10 @@ namespace Michelegz.NINA.StarSentinel.Helpers
                 if (k == pivotIndex)
                 {
                     break;
-                }
-                else if (k < pivotIndex)
+                } else if (k < pivotIndex)
                 {
                     right = pivotIndex - 1;
-                }
-                else
+                } else
                 {
                     left = pivotIndex + 1;
                 }

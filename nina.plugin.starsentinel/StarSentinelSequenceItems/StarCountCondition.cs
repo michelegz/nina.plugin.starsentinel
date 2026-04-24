@@ -276,7 +276,6 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
             }
         }
 
-
         private void OnImageSaved(object sender, ImageSavedEventArgs e)
         {
             try
@@ -345,8 +344,7 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
                         Logger.Debug(logPrefix + " Context changed or new context created.");
                         Logger.Info(logPrefix + $" New or switched context. Total contexts: {contextRegistry.Contexts.Count}");
                     }
-                }
-                else
+                } else
                 {
                     Logger.Debug(logPrefix + $" Missing context info (coords/camera/exposure), skipping context evaluation.");
                 }
@@ -432,8 +430,7 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
                     Logger.Info(logPrefix +
                         $" Bad frame. Stars={starCount}, Rel={RelativeStarCount}%, " +
                         $"BadFrames={contextRegistry.CurrentState.BadFrames}/{MaxBadFrames}");
-                }
-                else if (contextRegistry.CurrentState.BadFrames > 0)
+                } else if (contextRegistry.CurrentState.BadFrames > 0)
                 {
                     UpdateBadFrames(0);
 
@@ -478,7 +475,6 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
                 SetLoopCondition(true);
             }
         }
-
 
         [JsonProperty]
         public bool LoopCondition
