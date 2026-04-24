@@ -343,21 +343,58 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
                         $"RA={currentContext.RA}, DEC={currentContext.Dec}, Bin={currentContext.BinX}x{currentContext.BinY}, " +
                         $"Gain={currentContext.Gain}, Sensor={currentContext.SensorType}, ScaleProxy={currentContext.PixelScaleProxy}");
 
-                    // Match with existing contexts
-                    var match = contexts.FirstOrDefault(c => IsSameContext(c.Context, currentContext));
+                    // Prefer the currently active context first, then search all known contexts.
+                    ContextState? matchedState = null;
 
-                    if (match.Context != null)
+                    if (currentState != null)
                     {
-                        currentState = match.State;
+                        var activeIndex = contexts.FindIndex(c => c.State == currentState);
+                        if (activeIndex >= 0)
+                        {
+                            var activeEntry = contexts[activeIndex];
+                            if (IsSameContext(activeEntry.Context, currentContext))
+                            {
+                                matchedState = activeEntry.State;
+                                Logger.Debug(logPrefix + $" Active context matched at index {activeIndex}.");
+                            }
+                            else
+                            {
+                                Logger.Debug(logPrefix + $" Active context did not match at index {activeIndex}.");
+                            }
+                        }
+                        else
+                        {
+                            Logger.Debug(logPrefix + " Current active state is not present in stored contexts.");
+                        }
+                    }
+
+                    if (matchedState == null)
+                    {
+                        Logger.Debug(logPrefix + $" Searching {contexts.Count} existing contexts for a match.");
+                        for (int i = 0; i < contexts.Count; i++)
+                        {
+                            if (IsSameContext(contexts[i].Context, currentContext))
+                            {
+                                matchedState = contexts[i].State;
+                                Logger.Debug(logPrefix + $" Existing context matched at index {i}.");
+                                break;
+                            }
+                        }
+                    }
+
+                    if (matchedState != null)
+                    {
+                        currentState = matchedState;
                         RaisePropertyChanged(nameof(BadFrames));
-                        Logger.Debug(logPrefix + $" Existing context matched.");
-                    } else
+                    }
+                    else
                     {
                         var newState = new ContextState();
                         contexts.Add((currentContext, newState));
                         currentState = newState;
                         RaisePropertyChanged(nameof(BadFrames));
 
+                        Logger.Debug(logPrefix + " No matching context found. Creating a new context.");
                         Logger.Info(logPrefix + $" New context created. Total contexts: {contexts.Count}");
                     }
                 } else
