@@ -64,13 +64,13 @@
                         VerticalAlignment="Center"
                         Text="{Binding ReferenceStarCount}"
                         ToolTip="Reference star count for the current analysis ({Binding ReferencePercentile} percentile)" />
-                    <TextBlock VerticalAlignment="Center" Text="Rel stars" />
+                    <TextBlock VerticalAlignment="Center" Text="| Rel stars" />
                     <TextBlock
                         Margin="5,0,10,0"
                         VerticalAlignment="Center"
                         Text="{Binding RelativeStarCountText}"
                         ToolTip="Last frame percentage of stars compared to reference" />
-                    <TextBlock VerticalAlignment="Center" Text="Bad frames" />
+                    <TextBlock VerticalAlignment="Center" Text="| Bad frames" />
                     <TextBlock
                         Margin="5,0,10,0"
                         VerticalAlignment="Center"

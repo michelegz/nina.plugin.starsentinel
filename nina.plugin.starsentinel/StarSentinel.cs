@@ -43,6 +43,7 @@ namespace Michelegz.NINA.StarSentinel
     {
         private readonly IPluginOptionsAccessor pluginSettings;
         private readonly IProfileService profileService;
+        private readonly Guid pluginIdentifier;
         private ICommand resetSettingsCommand;
 
         [ImportingConstructor]
@@ -57,9 +58,10 @@ namespace Michelegz.NINA.StarSentinel
 
             StarSentinelMediator.Instance.RegisterPlugin(this);
 
-            // This helper class can be used to store plugin settings that are dependent on the current profile
-            this.pluginSettings = new PluginOptionsAccessor(profileService, Guid.Parse(this.Identifier));
             this.profileService = profileService;
+            this.pluginIdentifier = Guid.Parse(this.Identifier);
+            // This helper class can be used to store plugin settings that are dependent on the current profile
+            this.pluginSettings = new PluginOptionsAccessor(profileService, this.pluginIdentifier);
         }
 
         public override Task Teardown()
@@ -76,18 +78,21 @@ namespace Michelegz.NINA.StarSentinel
             this.PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
+        private uint GetSettingUInt32(string name, uint defaultValue)
+        {
+            var value = pluginSettings.GetValueUInt32(name, uint.MaxValue);
+            if (value == uint.MaxValue)
+            {
+                value = defaultValue;
+                pluginSettings.SetValueUInt32(name, value);
+            }
+
+            return value;
+        }
+
         public uint ExposureTolerance
         {
-            get
-            {
-                uint exposureTolerance;
-                if (!profileService.ActiveProfile.PluginSettings.TryGetValue(Guid.Parse(this.Identifier), nameof(ExposureTolerance), out exposureTolerance))
-                {
-                    exposureTolerance = Properties.Settings.Default.ExposureTolerance;
-                    pluginSettings.SetValueUInt32(nameof(ExposureTolerance), exposureTolerance);
-                }
-                return exposureTolerance;
-            }
+            get => GetSettingUInt32(nameof(ExposureTolerance), Properties.Settings.Default.ExposureTolerance);
             set
             {
                 if (ExposureTolerance != value)
@@ -100,16 +105,7 @@ namespace Michelegz.NINA.StarSentinel
 
         public uint FovTolerance
         {
-            get
-            {
-                uint fovTolerance;
-                if (!profileService.ActiveProfile.PluginSettings.TryGetValue(Guid.Parse(this.Identifier), nameof(FovTolerance), out fovTolerance))
-                {
-                    fovTolerance = Properties.Settings.Default.FovTolerance;
-                    pluginSettings.SetValueUInt32(nameof(FovTolerance), fovTolerance);
-                }
-                return fovTolerance;
-            }
+            get => GetSettingUInt32(nameof(FovTolerance), Properties.Settings.Default.FovTolerance);
             set
             {
                 if (FovTolerance != value)
@@ -122,16 +118,7 @@ namespace Michelegz.NINA.StarSentinel
 
         public uint ReferencePercentile
         {
-            get
-            {
-                uint referencePercentile;
-                if (!profileService.ActiveProfile.PluginSettings.TryGetValue(Guid.Parse(this.Identifier), nameof(ReferencePercentile), out referencePercentile))
-                {
-                    referencePercentile = Properties.Settings.Default.ReferencePercentile;
-                    pluginSettings.SetValueUInt32(nameof(ReferencePercentile), referencePercentile);
-                }
-                return referencePercentile;
-            }
+            get => GetSettingUInt32(nameof(ReferencePercentile), Properties.Settings.Default.ReferencePercentile);
             set
             {
                 if (ReferencePercentile != value)
@@ -144,16 +131,7 @@ namespace Michelegz.NINA.StarSentinel
 
         public uint InitialSamples
         {
-            get
-            {
-                uint initialSamples;
-                if (!profileService.ActiveProfile.PluginSettings.TryGetValue(Guid.Parse(this.Identifier), nameof(InitialSamples), out initialSamples))
-                {
-                    initialSamples = Properties.Settings.Default.InitialSamples;
-                    pluginSettings.SetValueUInt32(nameof(InitialSamples), initialSamples);
-                }
-                return initialSamples;
-            }
+            get => GetSettingUInt32(nameof(InitialSamples), Properties.Settings.Default.InitialSamples);
             set
             {
                 if (InitialSamples != value)
