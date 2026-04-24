@@ -145,8 +145,7 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
                 Subscribe();
             }
 
-            // Add your logic here to determine if the loop should continue
-            return true;
+            return loopCondition;
         }
 
         private void Subscribe()
@@ -229,6 +228,21 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
             }
         }
 
+        private string FormatStatText(int value, bool addPercent = false)
+        {
+            if (currentState?.History == null)
+            {
+                return "--";
+            }
+
+            if (currentState.History.Count < StarSentinelMediator.Instance.Plugin.InitialSamples)
+            {
+                return "--";
+            }
+
+            return addPercent ? $"{value}%" : value.ToString();
+        }
+
         [JsonProperty]
         public int RelativeStarCount
         {
@@ -242,23 +256,7 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
         }
 
         [JsonProperty]
-        public string RelativeStarCountText
-        {
-            get
-            {
-                if (currentState?.History == null)
-                {
-                    return "--";
-                }
-
-                if (currentState.History.Count < StarSentinelMediator.Instance.Plugin.InitialSamples)
-                {
-                    return "--";
-                }
-
-                return $"{RelativeStarCount}%";
-            }
-        }
+        public string RelativeStarCountText => FormatStatText(RelativeStarCount, true);
 
         [JsonProperty]
         public int ReferenceStarCount
@@ -273,23 +271,7 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
         }
 
         [JsonProperty]
-        public string ReferenceStarCountText
-        {
-            get
-            {
-                if (currentState?.History == null)
-                {
-                    return "--";
-                }
-
-                if (currentState.History.Count < StarSentinelMediator.Instance.Plugin.InitialSamples)
-                {
-                    return "--";
-                }
-
-                return $"{ReferenceStarCount}%";
-            }
-        }
+        public string ReferenceStarCountText => FormatStatText(ReferenceStarCount);
 
         [JsonProperty]
         public int BadFrames
@@ -306,6 +288,15 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
             }
             currentState.BadFrames = value;
             RaisePropertyChanged(nameof(BadFrames));
+        }
+
+        private void SetLoopCondition(bool value)
+        {
+            if (loopCondition != value)
+            {
+                loopCondition = value;
+                RaisePropertyChanged(nameof(LoopCondition));
+            }
         }
 
         private void OnImageSaved(object sender, ImageSavedEventArgs e)
@@ -474,7 +465,7 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
                 // =========================
                 if (currentState.BadFrames >= MaxBadFrames)
                 {
-                    loopCondition = false;
+                    SetLoopCondition(false);
 
                     Logger.Info(logPrefix +
                         $" Too many bad frames -> loopCondition = FALSE");
@@ -482,7 +473,7 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
                     return;
                 }
 
-                loopCondition = true;
+                SetLoopCondition(true);
 
                 // =========================
                 // DEBUG: ACTIVE CONTEXTS
@@ -503,7 +494,7 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
             } catch (Exception ex)
             {
                 Logger.Error(logPrefix + $" Exception in OnImageSaved: {ex}");
-                loopCondition = true;
+                SetLoopCondition(true);
             }
         }
 
