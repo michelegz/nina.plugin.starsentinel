@@ -69,8 +69,6 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
 
         private readonly Func<object, BeforeImageSavedEventArgs, Task> beforeImageSavedHandler;
 
-        private Queue<int> history;
-
         private int maxBadFrames;
         private int relStarCountThreshold; // percentage
         private int absStarCountThreshold; // absolute number of stars
@@ -78,6 +76,7 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
         private int relativeStarCount;
         private int referenceStarCount;
         private int historySize;
+        private bool isSubscribed = false;
 
         public record ImagingContext(
             string Filter,
@@ -116,28 +115,41 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
         {
             this.profileService = profileService;
             this.imageSaveMediator = imageSaveMediator;
-            this.history = new Queue<int>();
             this.historySize = 1000; // for now it is used just to limit the memory usage
             this.MaxBadFrames = 10;
             this.RelStarCountThreshold = 20;
             this.AbsStarCountThreshold = 10;
 
             this.ReferenceStarCount = 0;
-            this.imageSaveMediator.ImageSaved += OnImageSaved;
-            //this.PropertyChanged += PropertyChangeListener;
+            Subscribe();
         }
 
-        /*
-        private void PropertyChangeListener(object sender, PropertyChangedEventArgs e) {
-            if (e.PropertyName == "Status") {
-                if (Status == SequenceEntityStatus.DISABLED) {
-                    loopCondition = true;
-                } else if (Status == SequenceEntityStatus.CREATED) {
-                    loopCondition = true;
-                }
+
+        private void Subscribe()
+        {
+            if (isSubscribed)
+            {
+                Logger.Info(logPrefix + $"already subscribed to ImageSaved");
+                return;
+            }
+
+            imageSaveMediator.ImageSaved += OnImageSaved;
+            isSubscribed = true;
+
+            Logger.Info(logPrefix + $"subscribed to ImageSaved");
+        }
+
+        public void Dispose()
+        {
+            if (imageSaveMediator != null && isSubscribed)
+            {
+                imageSaveMediator.ImageSaved -= OnImageSaved;
+                isSubscribed = false;
+
+                Logger.Info("StarSentinel: unsubscribed from ImageSaved");
             }
         }
-        */
+
 
         [JsonProperty]
         public int MaxBadFrames
@@ -183,16 +195,22 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
                 RaisePropertyChanged(nameof(RelativeStarCountText));
             }
         }
-
         [JsonProperty]
-        public String RelativeStarCountText
+        public string RelativeStarCountText
         {
             get
             {
-                if (history.Count >= StarSentinelMediator.Instance.Plugin.InitialSamples)
+                if (currentState?.History == null)
                 {
-                    return RelativeStarCount.ToString() + "%";
-                } else { return "--"; }
+                    return "--";
+                }
+
+                if (currentState.History.Count < StarSentinelMediator.Instance.Plugin.InitialSamples)
+                {
+                    return "--";
+                }
+
+                return $"{RelativeStarCount}%";
             }
         }
 
@@ -213,11 +231,19 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
         {
             get
             {
-                if (history.Count >= StarSentinelMediator.Instance.Plugin.InitialSamples)
+                if (currentState?.History == null)
                 {
-                    return ReferenceStarCount.ToString();
-                } else { return "--"; }
+                    return "--";
+                }
+
+                if (currentState.History.Count < StarSentinelMediator.Instance.Plugin.InitialSamples)
+                {
+                    return "--";
+                }
+
+                return $"{ReferenceStarCount}%";
             }
+        }
         }
 
         [JsonProperty]
@@ -414,14 +440,15 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
                 loopCondition = true;
 
                 // =========================
-                // TRACE: ACTIVE CONTEXTS
+                // DEBUG: ACTIVE CONTEXTS
                 // =========================
-                Logger.Trace(logPrefix + $" Active contexts: {contexts.Count}");
+                Logger.Debug(logPrefix + $" OnImageSaved HASH={GetHashCode()} THREAD={Environment.CurrentManagedThreadId}");
+                Logger.Debug(logPrefix + $" Active contexts: {contexts.Count}");
 
                 int i = 0;
                 foreach (var c in contexts)
                 {
-                    Logger.Trace(logPrefix +
+                    Logger.Debug(logPrefix +
                         $" [{i}] Filter={c.Context.Filter}, Exp={c.Context.Exposure}, " +
                         $"RA={c.Context.RA}, DEC={c.Context.Dec}, " +
                         $"History={c.State.History.Count}, BadFrames={c.State.BadFrames}");
@@ -580,9 +607,5 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
             return $"Category: {Category}, Item: {nameof(StarCountCondition)}, Check: {LoopCondition}";
         }
 
-        public void Dispose()
-        {
-            this.imageSaveMediator.ImageSaved -= OnImageSaved;
-        }
     }
 }

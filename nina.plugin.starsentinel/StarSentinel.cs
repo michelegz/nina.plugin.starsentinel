@@ -55,6 +55,8 @@ namespace Michelegz.NINA.StarSentinel
                 CoreUtil.SaveSettings(Settings.Default);
             }
 
+            StarSentinelMediator.Instance.RegisterPlugin(this);
+
             // This helper class can be used to store plugin settings that are dependent on the current profile
             this.pluginSettings = new PluginOptionsAccessor(profileService, Guid.Parse(this.Identifier));
             this.profileService = profileService;
