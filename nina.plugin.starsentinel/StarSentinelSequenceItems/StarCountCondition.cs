@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using Michelegz.NINA.StarSentinel.Helpers;
+using Newtonsoft.Json;
 using NINA.Core.Enum;
 using NINA.Core.Utility;
 using NINA.Profile.Interfaces;
@@ -81,29 +82,7 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
         private int referenceStarCount;
         private int historySize = 1000;
 
-        public record ImagingContext(
-            string Filter,
-            double Exposure,
-            double RA,
-            double Dec,
-            int BinX,
-            int BinY,
-            int Gain,
-            SensorType SensorType,
-            double PixelScaleProxy,
-            int FrameWidthPx,
-            int FrameHeightPx
-        );
-
-        private readonly List<(ImagingContext Context, ContextState State)> contexts = new();
-
-        private ContextState? currentState;
-
-        private class ContextState
-        {
-            public Queue<int> History { get; } = new();
-            public int BadFrames { get; set; }
-        }
+        private readonly ImagingContextRegistry contextRegistry = new();
 
         private const String logPrefix = "StarSentinel: ";
 
@@ -228,12 +207,12 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
 
         private string FormatStatText(int value, bool addPercent = false)
         {
-            if (currentState?.History == null)
+            if (contextRegistry.CurrentState?.History == null)
             {
                 return "--";
             }
 
-            if (currentState.History.Count < StarSentinelMediator.Instance.Plugin.InitialSamples)
+            if (contextRegistry.CurrentState.History.Count < StarSentinelMediator.Instance.Plugin.InitialSamples)
             {
                 return "--";
             }
@@ -274,17 +253,17 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
         [JsonProperty]
         public int BadFrames
         {
-            get => currentState?.BadFrames ?? 0;
+            get => contextRegistry.CurrentState?.BadFrames ?? 0;
         }
 
         private void UpdateBadFrames(int value)
         {
-            if
-                (currentState == null)
+            if (contextRegistry.CurrentState == null)
             {
                 return;
             }
-            currentState.BadFrames = value;
+
+            contextRegistry.CurrentState.BadFrames = value;
             RaisePropertyChanged(nameof(BadFrames));
         }
 
@@ -386,7 +365,7 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
                 var coords = e.MetaData.Target?.Coordinates;
                 var cam = e.MetaData.Camera;
 
-                ImagingContext? currentContext = null;
+                ImagingContext currentContext = null;
 
                 if (coords != null && e.MetaData.Image.ExposureTime > 0 && cam != null)
                 {
@@ -411,64 +390,25 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
                         $"RA={currentContext.RA}, DEC={currentContext.Dec}, Bin={currentContext.BinX}x{currentContext.BinY}, " +
                         $"Gain={currentContext.Gain}, Sensor={currentContext.SensorType}, ScaleProxy={currentContext.PixelScaleProxy}");
 
-                    // Prefer the currently active context first, then search all known contexts.
-                    ContextState? matchedState = null;
+                    var previousState = contextRegistry.CurrentState;
+                    var matchedState = contextRegistry.GetOrCreateState(
+                        currentContext,
+                        StarSentinelMediator.Instance.Plugin.ExposureTolerance,
+                        StarSentinelMediator.Instance.Plugin.FovTolerance);
 
-                    if (currentState != null)
+                    if (!ReferenceEquals(previousState, matchedState))
                     {
-                        var activeIndex = contexts.FindIndex(c => c.State == currentState);
-                        if (activeIndex >= 0)
-                        {
-                            var activeEntry = contexts[activeIndex];
-                            if (IsSameContext(activeEntry.Context, currentContext))
-                            {
-                                matchedState = activeEntry.State;
-                                Logger.Debug(logPrefix + $" Active context matched at index {activeIndex}.");
-                            } else
-                            {
-                                Logger.Debug(logPrefix + $" Active context did not match at index {activeIndex}.");
-                            }
-                        } else
-                        {
-                            Logger.Debug(logPrefix + " Current active state is not present in stored contexts.");
-                        }
-                    }
-
-                    if (matchedState == null)
-                    {
-                        Logger.Debug(logPrefix + $" Searching {contexts.Count} existing contexts for a match.");
-
-                        for (int j = 0; j < contexts.Count; j++)
-                        {
-                            if (IsSameContext(contexts[j].Context, currentContext))
-                            {
-                                matchedState = contexts[j].State;
-                                Logger.Debug(logPrefix + $" Existing context matched at index {j}.");
-                                break;
-                            }
-                        }
-                    }
-
-                    if (matchedState != null)
-                    {
-                        currentState = matchedState;
                         RaisePropertyChanged(nameof(BadFrames));
-                    } else
-                    {
-                        var newState = new ContextState();
-                        contexts.Add((currentContext, newState));
-                        currentState = newState;
-                        RaisePropertyChanged(nameof(BadFrames));
-
-                        Logger.Debug(logPrefix + " No matching context found. Creating a new context.");
-                        Logger.Info(logPrefix + $" New context created. Total contexts: {contexts.Count}");
+                        Logger.Debug(logPrefix + " Context changed or new context created.");
+                        Logger.Info(logPrefix + $" New or switched context. Total contexts: {contextRegistry.Contexts.Count}");
                     }
-                } else
+                }
+                else
                 {
                     Logger.Debug(logPrefix + $" Missing context info (coords/camera/exposure), skipping context evaluation.");
                 }
 
-                if (currentState == null)
+                if (contextRegistry.CurrentState == null)
                 {
                     Logger.Debug(logPrefix + $" No active context state.");
                     return;
@@ -492,11 +432,11 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
                 // =========================
                 // HISTORY UPDATE
                 // =========================
-                currentState.History.Enqueue(starCount);
+                contextRegistry.CurrentState.History.Enqueue(starCount);
 
-                if (currentState.History.Count > historySize)
+                if (contextRegistry.CurrentState.History.Count > historySize)
                 {
-                    currentState.History.Dequeue();
+                    contextRegistry.CurrentState.History.Dequeue();
                 }
 
                 // =========================
@@ -505,10 +445,10 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
                 // InitialSamples controls how many frames are collected before
                 // the first percentile-based reference value is computed.
                 // Until that threshold is reached, the UI should show "--".
-                if (currentState.History.Count < StarSentinelMediator.Instance.Plugin.InitialSamples)
+                if (contextRegistry.CurrentState.History.Count < StarSentinelMediator.Instance.Plugin.InitialSamples)
                 {
                     Logger.Debug(logPrefix +
-                        $" Collecting data... {currentState.History.Count}/" +
+                        $" Collecting data... {contextRegistry.CurrentState.History.Count}/" +
                         $"{StarSentinelMediator.Instance.Plugin.InitialSamples}");
                     return;
                 }
@@ -517,7 +457,7 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
                 // REFERENCE (percentile)
                 // =========================
                 double percentile = StarSentinelMediator.Instance.Plugin.ReferencePercentile / 100.0;
-                ReferenceStarCount = GetPercentileValue(currentState.History, percentile);
+                ReferenceStarCount = GetPercentileValue(contextRegistry.CurrentState.History, percentile);
 
                 Logger.Debug(logPrefix +
                     $" Reference ({percentile * 100:F0}th percentile): {ReferenceStarCount}");
@@ -544,12 +484,13 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
 
                 if (isBad)
                 {
-                    UpdateBadFrames(currentState.BadFrames + 1);
+                    UpdateBadFrames(contextRegistry.CurrentState.BadFrames + 1);
 
                     Logger.Info(logPrefix +
                         $" Bad frame. Stars={starCount}, Rel={RelativeStarCount}%, " +
-                        $"BadFrames={currentState.BadFrames}/{MaxBadFrames}");
-                } else if (currentState.BadFrames > 0)
+                        $"BadFrames={contextRegistry.CurrentState.BadFrames}/{MaxBadFrames}");
+                }
+                else if (contextRegistry.CurrentState.BadFrames > 0)
                 {
                     UpdateBadFrames(0);
 
@@ -560,7 +501,7 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
                 // =========================
                 // LOOP CONDITION
                 // =========================
-                if (currentState.BadFrames >= MaxBadFrames)
+                if (contextRegistry.CurrentState.BadFrames >= MaxBadFrames)
                 {
                     SetLoopCondition(false);
 
@@ -576,10 +517,10 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
                 // DEBUG: ACTIVE CONTEXTS
                 // =========================
                 Logger.Debug(logPrefix + $" OnImageSaved HASH={GetHashCode()} THREAD={Environment.CurrentManagedThreadId}");
-                Logger.Debug(logPrefix + $" Active contexts: {contexts.Count}");
+                Logger.Debug(logPrefix + $" Active contexts: {contextRegistry.Contexts.Count}");
 
                 int i = 0;
-                foreach (var c in contexts)
+                foreach (var c in contextRegistry.Contexts)
                 {
                     Logger.Debug(logPrefix +
                         $" [{i}] Filter={c.Context.Filter}, Exp={c.Context.Exposure}, " +
@@ -595,110 +536,6 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
             }
         }
 
-        private bool IsSameContext(ImagingContext a, ImagingContext b)
-        {
-            if (a == null || b == null)
-            {
-                Logger.Debug(logPrefix + $" One of the contexts is null, treating as different.");
-                return false;
-            }
-
-            // =========================
-            // HARDWARE CHECK (strict)
-            // =========================
-
-            if (a.Filter != b.Filter)
-            {
-                Logger.Debug(logPrefix + $" Filter mismatch. A={a.Filter}, B={b.Filter}");
-                return false;
-            }
-
-            if (a.BinX != b.BinX || a.BinY != b.BinY)
-            {
-                Logger.Debug(logPrefix + $" Binning mismatch. A={a.BinX}x{a.BinY}, B={b.BinX}x{b.BinY}");
-                return false;
-            }
-
-            if (a.Gain != b.Gain)
-            {
-                Logger.Debug(logPrefix + $" Gain mismatch. A={a.Gain}, B={b.Gain}");
-                return false;
-            }
-
-            if (a.SensorType != b.SensorType)
-            {
-                Logger.Debug(logPrefix + $" Sensor type mismatch. A={a.SensorType}, B={b.SensorType}");
-                return false;
-            }
-
-            // =========================
-            // EXPOSURE CHECK (RELATIVE)
-            // =========================
-
-            double exposureTolerancePercent = StarSentinelMediator.Instance.Plugin.ExposureTolerance;
-
-            double exposureRatio = (b.Exposure / a.Exposure) * 100.0;
-
-            if (Math.Abs(exposureRatio - 100.0) > exposureTolerancePercent)
-            {
-                Logger.Debug(
-                    logPrefix + $" Exposure mismatch. " +
-                    $"A={a.Exposure}s, B={b.Exposure}s, Ratio={exposureRatio:F1}%"
-                );
-
-                return false;
-            }
-
-            // =========================
-            // SKY SHIFT
-            // =========================
-
-            double deltaRa =
-                (a.RA - b.RA) * Math.Cos(b.Dec * Math.PI / 180.0);
-
-            double deltaDec = a.Dec - b.Dec;
-
-            double distance = Math.Sqrt(deltaRa * deltaRa + deltaDec * deltaDec);
-
-            // =========================
-            // REAL FOV (FROM IMAGE SIZE)
-            // =========================
-
-            // pixel scale (deg/pixel)
-            double pixelScale = a.PixelScaleProxy;
-
-            double fovWidth = pixelScale * a.FrameWidthPx;
-            double fovHeight = pixelScale * a.FrameHeightPx;
-
-            double fovDiagonal = Math.Sqrt(
-                fovWidth * fovWidth +
-                fovHeight * fovHeight
-            );
-
-            // =========================
-            // TOLERANCE (% OF FOV)
-            // =========================
-
-            double fovTolerancePercent = StarSentinelMediator.Instance.Plugin.FovTolerance / 100.0;
-
-            double threshold = fovDiagonal * fovTolerancePercent;
-
-            // =========================
-            // DECISION
-            // =========================
-
-            if (distance > threshold)
-            {
-                Logger.Debug(
-                    logPrefix + $" Context change detected (FOV rule). " +
-                    $"Shift={distance:F5}°, Threshold={threshold:F5}° ({fovTolerancePercent * 100}% FOV)"
-                );
-
-                return false;
-            }
-
-            return true;
-        }
 
         [JsonProperty]
         public bool LoopCondition
