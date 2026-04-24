@@ -276,63 +276,6 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
             }
         }
 
-        private int GetPercentileValue(Queue<int> history, double percentile)
-        {
-            var values = history.ToArray();
-            int index = (int)Math.Floor(percentile * (values.Length - 1));
-            return QuickSelect(values, index);
-        }
-
-        private int QuickSelect(int[] values, int k)
-        {
-            int left = 0;
-            int right = values.Length - 1;
-
-            while (left < right)
-            {
-                int pivotIndex = Partition(values, left, right, left + (right - left) / 2);
-                if (k == pivotIndex)
-                {
-                    break;
-                }
-                else if (k < pivotIndex)
-                {
-                    right = pivotIndex - 1;
-                }
-                else
-                {
-                    left = pivotIndex + 1;
-                }
-            }
-
-            return values[k];
-        }
-
-        private int Partition(int[] values, int left, int right, int pivotIndex)
-        {
-            int pivotValue = values[pivotIndex];
-            Swap(values, pivotIndex, right);
-            int storeIndex = left;
-
-            for (int i = left; i < right; i++)
-            {
-                if (values[i] < pivotValue)
-                {
-                    Swap(values, i, storeIndex);
-                    storeIndex++;
-                }
-            }
-
-            Swap(values, storeIndex, right);
-            return storeIndex;
-        }
-
-        private static void Swap(int[] values, int left, int right)
-        {
-            int temp = values[left];
-            values[left] = values[right];
-            values[right] = temp;
-        }
 
         private void OnImageSaved(object sender, ImageSavedEventArgs e)
         {
@@ -457,7 +400,7 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
                 // REFERENCE (percentile)
                 // =========================
                 double percentile = StarSentinelMediator.Instance.Plugin.ReferencePercentile / 100.0;
-                ReferenceStarCount = GetPercentileValue(contextRegistry.CurrentState.History, percentile);
+                ReferenceStarCount = PercentileHelper.GetPercentileValue(contextRegistry.CurrentState.History, percentile);
 
                 Logger.Debug(logPrefix +
                     $" Reference ({percentile * 100:F0}th percentile): {ReferenceStarCount}");
