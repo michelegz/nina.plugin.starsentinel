@@ -2,6 +2,7 @@
 using Newtonsoft.Json;
 using NINA.Core.Enum;
 using NINA.Core.Utility;
+using NINA.Core.Utility.Notification;
 using NINA.Profile.Interfaces;
 using NINA.Sequencer.Conditions;
 using NINA.Sequencer.SequenceItem;
@@ -105,13 +106,34 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
 
         private void PropertyChangeListener(object sender, PropertyChangedEventArgs e)
         {
-            //If the user disables the condition in the N.I.N.A. UI,
+            // If the user disables the condition in the N.I.N.A. UI,
             // we must immediately detach the event to prevent background processing.
-
-            if (e.PropertyName == "Status" && Status == SequenceEntityStatus.DISABLED)
+            if (e.PropertyName == "Status")
             {
-                Unsubscribe();
+                if (Status == SequenceEntityStatus.DISABLED)
+                {
+                    Unsubscribe();
+                }
+                else if (Status == SequenceEntityStatus.CREATED)
+                {
+                    ResetInternalState();
+                }
             }
+        }
+
+        private void ResetInternalState()
+        {
+            contextRegistry.Reset();
+            loopCondition = true;
+            relativeStarCount = 0;
+            referenceStarCount = 0;
+
+            SetLoopCondition(true);
+            RaisePropertyChanged(nameof(RelativeStarCount));
+            RaisePropertyChanged(nameof(RelativeStarCountText));
+            RaisePropertyChanged(nameof(ReferenceStarCount));
+            RaisePropertyChanged(nameof(ReferenceStarCountText));
+            RaisePropertyChanged(nameof(BadFrames));
         }
 
         public override bool Check(ISequenceItem previousItem, ISequenceItem nextItem)
@@ -448,6 +470,21 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
                     Logger.Info(logPrefix +
                         $" Too many bad frames -> loopCondition = FALSE");
 
+                    string reason;
+                    if (relative < RelStarCountThreshold && starCount < AbsStarCountThreshold)
+                    {
+                        reason = $"relative threshold ({RelStarCountThreshold}%) and absolute threshold ({AbsStarCountThreshold} stars)";
+                    }
+                    else if (relative < RelStarCountThreshold)
+                    {
+                        reason = $"relative threshold ({RelStarCountThreshold}%)";
+                    }
+                    else
+                    {
+                        reason = $"absolute threshold ({AbsStarCountThreshold} stars)";
+                    }
+
+                    Notification.ShowWarning($"Star Sentinel stopped the sequence because the {reason} was reached. Use the native NINA sequence reset to restart.");
                     return;
                 }
 
