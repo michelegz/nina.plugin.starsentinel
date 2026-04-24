@@ -177,18 +177,22 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
 
         }
 
+        public StarCountCondition(StarCountCondition copyMe)
+            : this(copyMe.profileService, copyMe.imageSaveMediator)
+        {
+            CopyMetaData(copyMe);
+            MaxBadFrames = copyMe.MaxBadFrames;
+            RelStarCountThreshold = copyMe.RelStarCountThreshold;
+            AbsStarCountThreshold = copyMe.AbsStarCountThreshold;
+        }
+
         public override object Clone()
         {
             /* * When N.I.N.A. clones the object for the UI, the new instance 
              * starts with isSubscribed = false. It will only subscribe if it's 
              * actually executed in a sequence.
              */
-            return new StarCountCondition(profileService, imageSaveMediator)
-            {
-                MaxBadFrames = this.MaxBadFrames,
-                RelStarCountThreshold = this.RelStarCountThreshold,
-                // Copy any other serialized properties here
-            };
+            return new StarCountCondition(this);
         }
 
 
