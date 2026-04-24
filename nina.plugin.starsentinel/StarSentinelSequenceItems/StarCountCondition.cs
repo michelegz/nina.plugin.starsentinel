@@ -7,6 +7,7 @@ using NINA.Sequencer.SequenceItem;
 using NINA.WPF.Base.Interfaces.Mediator;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.ComponentModel.Composition;
 using System.Linq;
 using System.Threading.Tasks;
@@ -64,10 +65,13 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
         /// </remarks>
         ///
 
-        protected IProfileService profileService;
-        protected IImageSaveMediator imageSaveMediator;
+        private readonly IProfileService profileService;
+        private readonly IImageSaveMediator imageSaveMediator;
 
-        private readonly Func<object, BeforeImageSavedEventArgs, Task> beforeImageSavedHandler;
+        // Keep a fixed reference to the event handler to ensure 
+        // that Unsubscribe (-=) target exactly the same delegate instance as Subscribe (+=).
+        private readonly EventHandler<ImageSavedEventArgs> imageSavedHandler;
+        private bool isSubscribed = false;
 
         private int maxBadFrames;
         private int relStarCountThreshold; // percentage
@@ -75,8 +79,7 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
         private bool loopCondition = true;
         private int relativeStarCount;
         private int referenceStarCount;
-        private int historySize;
-        private bool isSubscribed = false;
+        private int historySize = 1000;
 
         public record ImagingContext(
             string Filter,
@@ -92,8 +95,6 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
             int FrameHeightPx
         );
 
-        private ImagingContext? lastContext = null;
-
         private readonly List<(ImagingContext Context, ContextState State)> contexts = new();
 
         private ContextState? currentState;
@@ -107,47 +108,87 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
         private const String logPrefix = "StarSentinel: ";
 
         [ImportingConstructor]
-        public StarCountCondition(
-            IProfileService profileService,
-            IImageSaveMediator imageSaveMediator
-            )
-
+        public StarCountCondition(IProfileService profileService, IImageSaveMediator imageSaveMediator)
         {
             this.profileService = profileService;
             this.imageSaveMediator = imageSaveMediator;
-            this.historySize = 1000; // for now it is used just to limit the memory usage
+
+            // Initialize the handler once during construction
+            this.imageSavedHandler = OnImageSaved;
+
+            // Listen for status changes (Enabled/Disabled/Running) to manage the lifecycle
+            this.PropertyChanged += PropertyChangeListener;
+
+            // Default values
             this.MaxBadFrames = 10;
             this.RelStarCountThreshold = 20;
-            this.AbsStarCountThreshold = 10;
-
-            this.ReferenceStarCount = 0;
-            Subscribe();
         }
 
+        private void PropertyChangeListener(object sender, PropertyChangedEventArgs e)
+        {
+            //If the user disables the condition in the N.I.N.A. UI, 
+            // we must immediately detach the event to prevent background processing.
+            
+            if (e.PropertyName == "Status" && Status == SequenceEntityStatus.DISABLED)
+            {
+                Unsubscribe();
+            }
+        }
+
+        public override bool Check(ISequenceItem previousItem, ISequenceItem nextItem)
+        {
+            /* * Lazy Subscription: We subscribe only when the sequencer actually 
+             * evaluates this condition. This avoids UI clones from subscribing.
+             */
+            if (!isSubscribed)
+            {
+                Subscribe();
+            }
+
+            // Add your logic here to determine if the loop should continue
+            return true;
+        }
 
         private void Subscribe()
         {
-            if (isSubscribed)
+            if (!isSubscribed && imageSaveMediator != null)
             {
-                Logger.Info(logPrefix + $"already subscribed to ImageSaved");
-                return;
+                imageSaveMediator.ImageSaved += imageSavedHandler;
+                isSubscribed = true;
+                Logger.Debug($"[StarSentinel] Subscribed instance {GetHashCode()}");
             }
+        }
 
-            imageSaveMediator.ImageSaved += OnImageSaved;
-            isSubscribed = true;
-
-            Logger.Info(logPrefix + $"subscribed to ImageSaved");
+        private void Unsubscribe()
+        {
+            if (isSubscribed && imageSaveMediator != null)
+            {
+                imageSaveMediator.ImageSaved -= imageSavedHandler;
+                isSubscribed = false;
+                Logger.Debug($"[StarSentinel] Unsubscribed instance {GetHashCode()}");
+            }
         }
 
         public void Dispose()
         {
-            if (imageSaveMediator != null && isSubscribed)
-            {
-                imageSaveMediator.ImageSaved -= OnImageSaved;
-                isSubscribed = false;
+            // Essential cleanup when the item is removed from the sequencer
+            Unsubscribe();
+            this.PropertyChanged -= PropertyChangeListener;
 
-                Logger.Info("StarSentinel: unsubscribed from ImageSaved");
-            }
+        }
+
+        public override object Clone()
+        {
+            /* * When N.I.N.A. clones the object for the UI, the new instance 
+             * starts with isSubscribed = false. It will only subscribe if it's 
+             * actually executed in a sequence.
+             */
+            return new StarCountCondition(profileService, imageSaveMediator)
+            {
+                MaxBadFrames = this.MaxBadFrames,
+                RelStarCountThreshold = this.RelStarCountThreshold,
+                // Copy any other serialized properties here
+            };
         }
 
 
@@ -195,6 +236,7 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
                 RaisePropertyChanged(nameof(RelativeStarCountText));
             }
         }
+
         [JsonProperty]
         public string RelativeStarCountText
         {
@@ -244,7 +286,6 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
                 return $"{ReferenceStarCount}%";
             }
         }
-        
 
         [JsonProperty]
         public int BadFrames
@@ -573,31 +614,7 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
             get => loopCondition;
         }
 
-        /// <summary>
-        /// Once this check returns false, the condition will cause its parent instruction set to skip the rest and proceed with the next set
-        /// </summary>
-        /// <param name="previousItem"></param>
-        /// <param name="nextItem"></param>
-        /// <returns></returns>
-        public override bool Check(ISequenceItem previousItem, ISequenceItem nextItem)
-        {
-            return loopCondition;
-        }
-
-        public override object Clone()
-        {
-            return new StarCountCondition(
-                this.profileService,
-                this.imageSaveMediator
-                )
-            {
-                Icon = Icon,
-                Name = Name,
-                Category = Category,
-                Description = Description
-            };
-        }
-
+ 
         /// <summary>
         /// This string will be used for logging
         /// </summary>
@@ -606,6 +623,5 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
         {
             return $"Category: {Category}, Item: {nameof(StarCountCondition)}, Check: {LoopCondition}";
         }
-
     }
 }
