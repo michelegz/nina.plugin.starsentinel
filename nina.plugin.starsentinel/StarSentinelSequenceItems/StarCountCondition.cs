@@ -368,12 +368,13 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
                     if (matchedState == null)
                     {
                         Logger.Debug(logPrefix + $" Searching {contexts.Count} existing contexts for a match.");
-                        for (int i = 0; i < contexts.Count; i++)
+                        int j;
+                        for (j = 0; j < contexts.Count; j++)
                         {
-                            if (IsSameContext(contexts[i].Context, currentContext))
+                            if (IsSameContext(contexts[j].Context, currentContext))
                             {
-                                matchedState = contexts[i].State;
-                                Logger.Debug(logPrefix + $" Existing context matched at index {i}.");
+                                matchedState = contexts[j].State;
+                                Logger.Debug(logPrefix + $" Existing context matched at index {j}.");
                                 break;
                             }
                         }
