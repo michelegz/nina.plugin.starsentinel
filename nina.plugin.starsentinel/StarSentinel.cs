@@ -90,7 +90,7 @@ namespace Michelegz.NINA.StarSentinel
             {
                 if (ExposureTolerance != value)
                 {
-                    pluginSettings.SetValueUInt32(nameof(ExposureTolerance), Math.Clamp(value, 0, 100));
+                    pluginSettings.SetValueUInt32(nameof(ExposureTolerance), Math.Clamp(value, 10, 50));
                     RaisePropertyChanged();
                 }
             }
@@ -112,7 +112,7 @@ namespace Michelegz.NINA.StarSentinel
             {
                 if (FovTolerance != value)
                 {
-                    pluginSettings.SetValueUInt32(nameof(FovTolerance), Math.Clamp(value, 0, 100));
+                    pluginSettings.SetValueUInt32(nameof(FovTolerance), Math.Clamp(value, 5, 50));
                     RaisePropertyChanged();
                 }
             }
@@ -134,7 +134,7 @@ namespace Michelegz.NINA.StarSentinel
             {
                 if (ReferencePercentile != value)
                 {
-                    pluginSettings.SetValueUInt32(nameof(ReferencePercentile), Math.Clamp(value, 0, 100));
+                    pluginSettings.SetValueUInt32(nameof(ReferencePercentile), Math.Clamp(value, 50, 99));
                     RaisePropertyChanged();
                 }
             }
@@ -156,7 +156,7 @@ namespace Michelegz.NINA.StarSentinel
             {
                 if (InitialSamples != value)
                 {
-                    pluginSettings.SetValueUInt32(nameof(InitialSamples), Math.Clamp(value, 1, 50));
+                    pluginSettings.SetValueUInt32(nameof(InitialSamples), Math.Clamp(value, 3, 50));
                     RaisePropertyChanged();
                 }
             }

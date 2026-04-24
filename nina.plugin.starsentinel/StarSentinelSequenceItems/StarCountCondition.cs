@@ -1,23 +1,14 @@
-﻿using Accord.Statistics.Running;
-using Microsoft.Win32;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using NINA.Core.Enum;
 using NINA.Core.Utility;
-using NINA.Equipment.Interfaces.Mediator;
 using NINA.Profile.Interfaces;
 using NINA.Sequencer.Conditions;
 using NINA.Sequencer.SequenceItem;
-using NINA.Sequencer.SequenceItem.Imaging;
 using NINA.WPF.Base.Interfaces.Mediator;
-using NINA.WPF.Base.Interfaces.ViewModel;
-using NINA.WPF.Base.Mediator;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.ComponentModel.Composition;
 using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
@@ -87,7 +78,6 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
         private int relativeStarCount;
         private int referenceStarCount;
         private int historySize;
-        private int badFrames;
 
         public record ImagingContext(
             string Filter,
@@ -104,6 +94,16 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
         );
 
         private ImagingContext? lastContext = null;
+
+        private readonly List<(ImagingContext Context, ContextState State)> contexts = new();
+
+        private ContextState? currentState;
+
+        private class ContextState
+        {
+            public Queue<int> History { get; } = new();
+            public int BadFrames { get; set; }
+        }
 
         private const String logPrefix = "StarSentinel: ";
 
@@ -223,29 +223,36 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
         [JsonProperty]
         public int BadFrames
         {
-            get => badFrames;
-            private set
+            get => currentState?.BadFrames ?? 0;
+        }
+
+        private void UpdateBadFrames(int value)
+        {
+            if
+                (currentState == null)
             {
-                badFrames = value;
-                RaisePropertyChanged();
+                return;
             }
+            currentState.BadFrames = value;
+            RaisePropertyChanged(nameof(BadFrames));
         }
 
         private void OnImageSaved(object sender, ImageSavedEventArgs e)
         {
             try
             {
-                // Check if the saved image is a light frame, if not skip the analysis
+                // =========================
+                // FILTER: only LIGHT frames
+                // =========================
                 if (e.MetaData?.Image?.ImageType != "LIGHT")
                 {
-                    Logger.Debug(logPrefix + $" Skipping non-light frame. Image type: {e.MetaData?.Image?.ImageType}");
+                    Logger.Debug(logPrefix + $" Skipping non-light frame. Type: {e.MetaData?.Image?.ImageType}");
                     return;
                 }
 
                 // =========================
-                // CONTEXT EXTRACTION
+                // CONTEXT EXTRACTION + MATCHING
                 // =========================
-
                 var coords = e.MetaData?.Target?.Coordinates;
                 var cam = e.MetaData?.Camera;
 
@@ -253,7 +260,7 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
 
                 if (coords != null && e.MetaData.Image.ExposureTime > 0 && cam != null)
                 {
-                    double pixelScaleProxy = cam.PixelSize * cam.BinX; // proxy stabile senza focale
+                    double pixelScaleProxy = cam.PixelSize * cam.BinX;
 
                     currentContext = new ImagingContext(
                         (e.Filter ?? "Unknown").Trim().ToLowerInvariant(),
@@ -269,124 +276,163 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
                         e.Image.PixelHeight
                     );
 
-                    Logger.Debug(
-                        logPrefix + $" Context -> " +
-                        $"Filter={currentContext.Filter}, " +
-                        $"Exp={currentContext.Exposure}, " +
-                        $"RA={currentContext.RA}, DEC={currentContext.Dec}, " +
-                        $"Bin={currentContext.BinX}x{currentContext.BinY}, " +
-                        $"Gain={currentContext.Gain}, " +
-                        $"Sensor={currentContext.SensorType}, " +
-                        $"ScaleProxy={currentContext.PixelScaleProxy}"
-                    );
+                    Logger.Debug(logPrefix +
+                        $" Context -> Filter={currentContext.Filter}, Exp={currentContext.Exposure}, " +
+                        $"RA={currentContext.RA}, DEC={currentContext.Dec}, Bin={currentContext.BinX}x{currentContext.BinY}, " +
+                        $"Gain={currentContext.Gain}, Sensor={currentContext.SensorType}, ScaleProxy={currentContext.PixelScaleProxy}");
 
-                    if (lastContext == null)
+                    // Match with existing contexts
+                    var match = contexts.FirstOrDefault(c => IsSameContext(c.Context, currentContext));
+
+                    if (match.Context != null)
                     {
-                        lastContext = currentContext;
-                        Logger.Info(logPrefix + $" Initial context set.");
-                    } else if (!IsSameContext(lastContext, currentContext))
+                        currentState = match.State;
+                        RaisePropertyChanged(nameof(BadFrames));
+                        Logger.Debug(logPrefix + $" Existing context matched.");
+                    } else
                     {
-                        Logger.Info(logPrefix + $" Context change detected -> resetting history.");
+                        var newState = new ContextState();
+                        contexts.Add((currentContext, newState));
+                        currentState = newState;
+                        RaisePropertyChanged(nameof(BadFrames));
 
-                        ResetHistory();
-                        lastContext = currentContext;
-
-                        return; // IMPORTANT: skip this frame
+                        Logger.Info(logPrefix + $" New context created. Total contexts: {contexts.Count}");
                     }
                 } else
                 {
-                    Logger.Debug(logPrefix + $" Missing context info (coords/camera/duration), skipping context evaluation.");
+                    Logger.Debug(logPrefix + $" Missing context info (coords/camera/exposure), skipping context evaluation.");
+                }
+
+                if (currentState == null)
+                {
+                    Logger.Debug(logPrefix + $" No active context state.");
+                    return;
                 }
 
                 // =========================
-                // Star count analysis
+                // STAR COUNT
                 // =========================
                 var count = e.StarDetectionAnalysis?.DetectedStars;
 
                 if (count == null)
                 {
-                    Logger.Debug(logPrefix + $" No star detection data available for this image.");
+                    Logger.Debug(logPrefix + $" No star detection data available.");
                     return;
                 }
 
                 int starCount = count.Value;
 
-                Logger.Debug(logPrefix + $" Detected star count for saved image: " + starCount);
+                Logger.Debug(logPrefix + $" Detected stars: {starCount}");
 
-                history.Enqueue(starCount);
+                // =========================
+                // HISTORY UPDATE
+                // =========================
+                currentState.History.Enqueue(starCount);
 
-                if (history.Count > historySize)
+                if (currentState.History.Count > historySize)
                 {
-                    history.Dequeue();
+                    currentState.History.Dequeue();
                 }
 
-                if (history.Count < StarSentinelMediator.Instance.Plugin.InitialSamples)
+                // =========================
+                // INITIAL BUFFER
+                // =========================
+                if (currentState.History.Count < StarSentinelMediator.Instance.Plugin.InitialSamples)
                 {
-                    Logger.Debug(logPrefix + $" Collecting data... {history.Count}/{StarSentinelMediator.Instance.Plugin.InitialSamples} frames collected for analysis.");
+                    Logger.Debug(logPrefix +
+                        $" Collecting data... {currentState.History.Count}/" +
+                        $"{StarSentinelMediator.Instance.Plugin.InitialSamples}");
                     return;
                 }
 
-                var arr = history.OrderBy(x => x).ToArray();
+                // =========================
+                // REFERENCE (percentile)
+                // =========================
+                var arr = currentState.History.OrderBy(x => x).ToArray();
 
                 if (arr.Length < 5)
                 {
                     return;
                 }
 
-                //calculate the 80th percentile as reference, to be more robust against outliers than the maximum
                 double percentile = StarSentinelMediator.Instance.Plugin.ReferencePercentile / 100.0;
                 int index = (int)Math.Floor(percentile * (arr.Length - 1));
+
                 ReferenceStarCount = arr[index];
 
-                Logger.Debug(logPrefix + $" Calculated reference star count at {percentile * 100} percentile: {ReferenceStarCount}");
+                Logger.Debug(logPrefix +
+                    $" Reference ({percentile * 100:F0}th percentile): {ReferenceStarCount}");
 
                 if (ReferenceStarCount <= 0)
                 {
                     return;
                 }
 
+                // =========================
+                // RELATIVE STAR COUNT
+                // =========================
                 double relative = ((double)starCount / ReferenceStarCount) * 100.0;
-                relative = Math.Clamp(relative, 0, 1000); //just to prevent extreme outliers
+                relative = Math.Clamp(relative, 0, 1000);
 
                 RelativeStarCount = (int)relative;
 
+                // =========================
+                // BAD FRAME LOGIC
+                // =========================
                 bool isBad =
                     relative < RelStarCountThreshold ||
                     starCount < AbsStarCountThreshold;
 
                 if (isBad)
                 {
-                    BadFrames++;
-                    Logger.Info(logPrefix + $" Bad frame detected. Star count: {starCount}, Relative star count: {RelativeStarCount}%. Consecutive bad frames: {BadFrames}/{MaxBadFrames}.");
-                } else if (BadFrames > 0)
+                    UpdateBadFrames(currentState.BadFrames + 1);
+
+                    Logger.Info(logPrefix +
+                        $" Bad frame. Stars={starCount}, Rel={RelativeStarCount}%, " +
+                        $"BadFrames={currentState.BadFrames}/{MaxBadFrames}");
+                } else if (currentState.BadFrames > 0)
                 {
-                    BadFrames = 0;
-                    Logger.Info(logPrefix + $" Good frame detected. Star count: {starCount}, Relative star count: {RelativeStarCount}%. Consecutive bad frames reset to 0.");
+                    UpdateBadFrames(0);
+
+                    Logger.Info(logPrefix +
+                        $" Good frame. Stars={starCount}, Rel={RelativeStarCount}%. Reset bad frames.");
                 }
 
-                if (BadFrames >= MaxBadFrames)
+                // =========================
+                // LOOP CONDITION
+                // =========================
+                if (currentState.BadFrames >= MaxBadFrames)
                 {
                     loopCondition = false;
-                    Logger.Info(logPrefix + $" Too many consecutive bad frames detected. Loop condition set to false.");
+
+                    Logger.Info(logPrefix +
+                        $" Too many bad frames -> loopCondition = FALSE");
+
                     return;
                 }
 
                 loopCondition = true;
-            } catch
+
+                // =========================
+                // TRACE: ACTIVE CONTEXTS
+                // =========================
+                Logger.Trace(logPrefix + $" Active contexts: {contexts.Count}");
+
+                int i = 0;
+                foreach (var c in contexts)
+                {
+                    Logger.Trace(logPrefix +
+                        $" [{i}] Filter={c.Context.Filter}, Exp={c.Context.Exposure}, " +
+                        $"RA={c.Context.RA}, DEC={c.Context.Dec}, " +
+                        $"History={c.State.History.Count}, BadFrames={c.State.BadFrames}");
+
+                    i++;
+                }
+            } catch (Exception ex)
             {
+                Logger.Error(logPrefix + $" Exception in OnImageSaved: {ex}");
                 loopCondition = true;
             }
-        }
-
-        // This method resets the history and related counters when a context change is detected
-        private void ResetHistory()
-        {
-            history.Clear();
-            BadFrames = 0;
-            ReferenceStarCount = 0;
-            RelativeStarCount = 0;
-
-            Logger.Info(logPrefix + $" History reset completed.");
         }
 
         private bool IsSameContext(ImagingContext a, ImagingContext b)
