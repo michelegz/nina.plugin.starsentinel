@@ -297,24 +297,94 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
             }
         }
 
+        private int GetPercentileValue(Queue<int> history, double percentile)
+        {
+            var values = history.ToArray();
+            int index = (int)Math.Floor(percentile * (values.Length - 1));
+            return QuickSelect(values, index);
+        }
+
+        private int QuickSelect(int[] values, int k)
+        {
+            int left = 0;
+            int right = values.Length - 1;
+
+            while (left < right)
+            {
+                int pivotIndex = Partition(values, left, right, left + (right - left) / 2);
+                if (k == pivotIndex)
+                {
+                    break;
+                }
+                else if (k < pivotIndex)
+                {
+                    right = pivotIndex - 1;
+                }
+                else
+                {
+                    left = pivotIndex + 1;
+                }
+            }
+
+            return values[k];
+        }
+
+        private int Partition(int[] values, int left, int right, int pivotIndex)
+        {
+            int pivotValue = values[pivotIndex];
+            Swap(values, pivotIndex, right);
+            int storeIndex = left;
+
+            for (int i = left; i < right; i++)
+            {
+                if (values[i] < pivotValue)
+                {
+                    Swap(values, i, storeIndex);
+                    storeIndex++;
+                }
+            }
+
+            Swap(values, storeIndex, right);
+            return storeIndex;
+        }
+
+        private static void Swap(int[] values, int left, int right)
+        {
+            int temp = values[left];
+            values[left] = values[right];
+            values[right] = temp;
+        }
+
         private void OnImageSaved(object sender, ImageSavedEventArgs e)
         {
             try
             {
+                if (e == null)
+                {
+                    Logger.Debug(logPrefix + " OnImageSaved received null event args.");
+                    return;
+                }
+
+                if (e.MetaData == null || e.Image == null || e.MetaData.Image == null)
+                {
+                    Logger.Debug(logPrefix + " Incomplete image metadata, skipping frame.");
+                    return;
+                }
+
                 // =========================
                 // FILTER: only LIGHT frames
                 // =========================
-                if (e.MetaData?.Image?.ImageType != "LIGHT")
+                if (e.MetaData.Image.ImageType != "LIGHT")
                 {
-                    Logger.Debug(logPrefix + $" Skipping non-light frame. Type: {e.MetaData?.Image?.ImageType}");
+                    Logger.Debug(logPrefix + $" Skipping non-light frame. Type: {e.MetaData.Image.ImageType}");
                     return;
                 }
 
                 // =========================
                 // CONTEXT EXTRACTION + MATCHING
                 // =========================
-                var coords = e.MetaData?.Target?.Coordinates;
-                var cam = e.MetaData?.Camera;
+                var coords = e.MetaData.Target?.Coordinates;
+                var cam = e.MetaData.Camera;
 
                 ImagingContext? currentContext = null;
 
@@ -432,6 +502,9 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
                 // =========================
                 // INITIAL BUFFER
                 // =========================
+                // InitialSamples controls how many frames are collected before
+                // the first percentile-based reference value is computed.
+                // Until that threshold is reached, the UI should show "--".
                 if (currentState.History.Count < StarSentinelMediator.Instance.Plugin.InitialSamples)
                 {
                     Logger.Debug(logPrefix +
@@ -443,17 +516,8 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
                 // =========================
                 // REFERENCE (percentile)
                 // =========================
-                var arr = currentState.History.OrderBy(x => x).ToArray();
-
-                if (arr.Length < 5)
-                {
-                    return;
-                }
-
                 double percentile = StarSentinelMediator.Instance.Plugin.ReferencePercentile / 100.0;
-                int index = (int)Math.Floor(percentile * (arr.Length - 1));
-
-                ReferenceStarCount = arr[index];
+                ReferenceStarCount = GetPercentileValue(currentState.History, percentile);
 
                 Logger.Debug(logPrefix +
                     $" Reference ({percentile * 100:F0}th percentile): {ReferenceStarCount}");
