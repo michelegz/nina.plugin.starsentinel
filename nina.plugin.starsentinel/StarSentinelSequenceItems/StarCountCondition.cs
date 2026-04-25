@@ -77,6 +77,8 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
         private int relStarCountThreshold; // percentage
         private int absStarCountThreshold; // absolute number of stars
         private bool loopCondition = true;
+        private bool testMode = false;
+        private bool testModeNotificationShown = false;
         private int relativeStarCount;
         private int referenceStarCount;
         private int historySize = 1000;
@@ -123,6 +125,7 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
             contextRegistry.Reset();
             relativeStarCount = 0;
             referenceStarCount = 0;
+            testModeNotificationShown = false;
 
             SetLoopCondition(true);
             RaisePropertyChanged(nameof(LoopCondition));
@@ -180,6 +183,7 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
             MaxBadFrames = copyMe.MaxBadFrames;
             RelStarCountThreshold = copyMe.RelStarCountThreshold;
             AbsStarCountThreshold = copyMe.AbsStarCountThreshold;
+            TestMode = copyMe.TestMode;
         }
 
         public override object Clone()
@@ -298,6 +302,26 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
 
         [JsonProperty]
         public bool IsStopped => !loopCondition;
+
+        [JsonProperty]
+        public bool TestMode
+        {
+            get => testMode;
+            set
+            {
+                if (testMode != value)
+                {
+                    testMode = value;
+                    RaisePropertyChanged();
+                }
+            }
+        }
+
+#if TEST_MODE
+        public bool TestModeAvailable => true;
+#else
+        public bool TestModeAvailable => false;
+#endif
 
         private void OnImageSaved(object sender, ImageSavedEventArgs e)
         {
@@ -460,6 +484,7 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
                 } else if (contextRegistry.CurrentState.BadFrames > 0)
                 {
                     UpdateBadFrames(0);
+                    testModeNotificationShown = false;
 
                     Logger.Info(logPrefix +
                         $" Good frame. Stars={starCount}, Rel={RelativeStarCount}%. Reset bad frames.");
@@ -471,25 +496,37 @@ namespace Michelegz.NINA.StarSentinel.StarSentinelCategory
                 if (contextRegistry.CurrentState.BadFrames >= MaxBadFrames)
                 {
                     bool wasLooping = loopCondition;
-                    SetLoopCondition(false);
 
+                    string reason;
+                    if (relative < RelStarCountThreshold && starCount < AbsStarCountThreshold)
+                    {
+                        reason = $"relative threshold ({RelStarCountThreshold}%) and absolute threshold ({AbsStarCountThreshold} stars)";
+                    } else if (relative < RelStarCountThreshold)
+                    {
+                        reason = $"relative threshold ({RelStarCountThreshold}%)";
+                    } else
+                    {
+                        reason = $"absolute threshold ({AbsStarCountThreshold} stars)";
+                    }
+
+                    if (TestMode)
+                    {
+                        Logger.Info(logPrefix +
+                            $" Test mode active: would have stopped loop for {reason}, but sequence continues.");
+                        if (wasLooping && !testModeNotificationShown)
+                        {
+                            Notification.ShowWarning($"Star Sentinel test mode: would have stopped the sequence because the {reason}, but the sequence continues.");
+                            testModeNotificationShown = true;
+                        }
+                        return;
+                    }
+
+                    SetLoopCondition(false);
                     Logger.Info(logPrefix +
                         $" Too many bad frames -> loopCondition = FALSE");
 
                     if (wasLooping)
                     {
-                        string reason;
-                        if (relative < RelStarCountThreshold && starCount < AbsStarCountThreshold)
-                        {
-                            reason = $"relative threshold ({RelStarCountThreshold}%) and absolute threshold ({AbsStarCountThreshold} stars)";
-                        } else if (relative < RelStarCountThreshold)
-                        {
-                            reason = $"relative threshold ({RelStarCountThreshold}%)";
-                        } else
-                        {
-                            reason = $"absolute threshold ({AbsStarCountThreshold} stars)";
-                        }
-
                         Notification.ShowWarning($"Star Sentinel stopped the sequence because the {reason} was reached. Use the native NINA sequence reset to restart.");
                     }
 

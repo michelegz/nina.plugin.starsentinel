@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using Settings = Michelegz.NINA.StarSentinel.Properties.Settings;
 
+
 namespace Michelegz.NINA.StarSentinel
 {
     // Mediator between plugin class and trigger class

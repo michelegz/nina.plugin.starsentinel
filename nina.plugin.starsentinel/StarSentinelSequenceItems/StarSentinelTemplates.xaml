@@ -54,12 +54,14 @@
                                 Text="{Binding AbsStarCountThreshold}"
                                 ToolTip="Absolute star count threshold, set to 0 to disable absolute evaluation" />
                         </StackPanel>
-                        <StackPanel Margin="5,0,10,0" Orientation="Horizontal">
+                        <StackPanel
+                            Margin="5,0,10,0"
+                            Orientation="Horizontal">
                             <StackPanel.Style>
                                 <Style TargetType="StackPanel">
                                     <Setter Property="Visibility" Value="Collapsed" />
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsStopped}" Value="True">
+                                        <DataTrigger Binding="{Binding TestModeAvailable}" Value="True">
                                             <Setter Property="Visibility" Value="Visible" />
                                         </DataTrigger>
                                     </Style.Triggers>
@@ -67,9 +69,14 @@
                             </StackPanel.Style>
                             <TextBlock
                                 VerticalAlignment="Center"
-                                FontWeight="Bold"
-                                Text="⚠ Loop stopped" />
+                                Text="Test mode"
+                                Margin="0,0,5,0" />
+                            <CheckBox
+                                VerticalAlignment="Center"
+                                IsChecked="{Binding TestMode}"
+                                ToolTip="When enabled, Star Sentinel simulates stopping the sequence but does not actually stop the loop." />
                         </StackPanel>
+
                     </WrapPanel>
 
                 </StackPanel>
@@ -94,6 +101,22 @@
                         Margin="5,0,10,0"
                         VerticalAlignment="Center"
                         Text="{Binding BadFrames}" />
+                    <StackPanel Margin="5,0,10,0" Orientation="Horizontal">
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsStopped}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
+                        <TextBlock
+                            VerticalAlignment="Center"
+                            FontWeight="Bold"
+                            Text="⚠ Loop stopped" />
+                    </StackPanel>
                 </StackPanel>
             </nina:SequenceBlockView.SequenceItemProgressContent>
         </nina:SequenceBlockView>
