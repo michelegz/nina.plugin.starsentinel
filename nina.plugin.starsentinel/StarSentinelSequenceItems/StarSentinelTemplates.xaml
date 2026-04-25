@@ -21,39 +21,58 @@
     <DataTemplate DataType="{x:Type local:StarCountCondition}">
         <nina:SequenceBlockView>
             <nina:SequenceBlockView.SequenceItemContent>
-                <WrapPanel Orientation="Horizontal">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock VerticalAlignment="Center" Text="Max bad frames" />
-                        <TextBox
-                            MinWidth="40"
-                            Margin="5,0,10,0"
-                            HorizontalAlignment="Right"
-                            VerticalAlignment="Center"
-                            Text="{Binding MaxBadFrames}"
-                            ToolTip="Number of consecutive images under the threshold before exiting loop" />
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock VerticalAlignment="Center" Text="Relative threshold" />
-                        <ninactrl:UnitTextBox
-                            MinWidth="40"
-                            Margin="5,0,10,0"
-                            VerticalAlignment="Center"
-                            Text="{Binding RelStarCountThreshold}"
-                            TextAlignment="Right"
-                            ToolTip="Relative star count threshold, set to 0 to disable relative evaluation"
-                            Unit="%" />
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock VerticalAlignment="Center" Text="Absolute threshold" />
-                        <TextBox
-                            MinWidth="40"
-                            Margin="5,0,10,0"
-                            HorizontalAlignment="Right"
-                            VerticalAlignment="Center"
-                            Text="{Binding AbsStarCountThreshold}"
-                            ToolTip="Absolute star count threshold, set to 0 to disable absolute evaluation" />
-                    </StackPanel>
-                </WrapPanel>
+                <StackPanel>
+                    <WrapPanel Orientation="Horizontal">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock VerticalAlignment="Center" Text="Max bad frames" />
+                            <TextBox
+                                MinWidth="40"
+                                Margin="5,0,10,0"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center"
+                                Text="{Binding MaxBadFrames}"
+                                ToolTip="Number of consecutive images under the threshold before exiting loop" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock VerticalAlignment="Center" Text="Relative threshold" />
+                            <ninactrl:UnitTextBox
+                                MinWidth="40"
+                                Margin="5,0,10,0"
+                                VerticalAlignment="Center"
+                                Text="{Binding RelStarCountThreshold}"
+                                TextAlignment="Right"
+                                ToolTip="Relative star count threshold, set to 0 to disable relative evaluation"
+                                Unit="%" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock VerticalAlignment="Center" Text="Absolute threshold" />
+                            <TextBox
+                                MinWidth="40"
+                                Margin="5,0,10,0"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center"
+                                Text="{Binding AbsStarCountThreshold}"
+                                ToolTip="Absolute star count threshold, set to 0 to disable absolute evaluation" />
+                        </StackPanel>
+                        <StackPanel Margin="5,0,10,0" Orientation="Horizontal">
+                            <StackPanel.Style>
+                                <Style TargetType="StackPanel">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsStopped}" Value="True">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </StackPanel.Style>
+                            <TextBlock
+                                VerticalAlignment="Center"
+                                FontWeight="Bold"
+                                Text="⚠ Loop stopped" />
+                        </StackPanel>
+                    </WrapPanel>
+
+                </StackPanel>
             </nina:SequenceBlockView.SequenceItemContent>
 
             <nina:SequenceBlockView.SequenceItemProgressContent>
@@ -75,24 +94,6 @@
                         Margin="5,0,10,0"
                         VerticalAlignment="Center"
                         Text="{Binding BadFrames}" />
-                    <TextBlock
-                        Margin="10,0,0,0"
-                        VerticalAlignment="Center"
-                        Text="⚠ Sequence stopped"
-                        Foreground="OrangeRed"
-                        FontWeight="Bold"
-                        Visibility="Collapsed">
-                        <TextBlock.Style>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="Visibility" Value="Collapsed" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding LoopCondition}" Value="False">
-                                        <Setter Property="Visibility" Value="Visible" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TextBlock.Style>
-                    </TextBlock>
                 </StackPanel>
             </nina:SequenceBlockView.SequenceItemProgressContent>
         </nina:SequenceBlockView>
