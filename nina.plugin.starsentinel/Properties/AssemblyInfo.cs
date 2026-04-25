@@ -59,7 +59,7 @@ It provides a Loop Condition for the Advanced Sequencer. The plugin keeps a hist
 
 A frame is considered bad when the relative star count falls below the configured percentile threshold or when the raw star count is below the configured absolute limit. After a configurable number of consecutive bad frames, the loop condition is set to false and the sequence can stop.
 
-The analysis ignores non-light frames and resets its history automatically when the imaging context changes (filter, exposure, binning, gain, sensor type, or significant field-of-view shift), so the condition adapts to new targets and exposures.
+The analysis ignores non-light frames and maintains an in-memory registry of imaging contexts instead of discarding previous data. When the current context changes (filter, exposure, binning, gain, sensor type, or significant field-of-view shift), it switches to the matching context state while keeping the previous contexts available, so the condition can adapt across multiple targets, exposures, and multi-panel mosaics.
 
 This plugin is intended as a lightweight safeguard based on image data rather than external sky sensors. It is heuristic by design: star count can be influenced by focus, filters, target density, and seeing conditions, so use it with appropriate thresholds for your setup.
 
