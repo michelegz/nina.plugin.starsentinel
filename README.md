@@ -18,19 +18,19 @@ This plugin is intended as a lightweight safeguard based on image data rather th
 
 ## Manual Installation
 
-1. **Build the plugin**
-   - Open `nina.plugin.starsentinel.sln` in Visual Studio.
-   - Build the solution in either `Debug` or `Release` configuration.
+To install the plugin manually, download the latest release package and copy the compiled DLL into your N.I.N.A. plugins folder.
 
-2. **Find the output DLL**
-   - The build output DLL is renamed with the Git version and placed in the project `bin` folder.
+1. **Download the latest release**
+   - Go to the [Releases](https://github.com/michelegz/nina.plugin.starsentinel/releases) page and download the ZIP file for the latest version.
 
-3. **Copy to the N.I.N.A. plugins folder**
-   - Copy the generated DLL to:
+2. **Extract the release package**
+   - Extract the ZIP contents to a temporary folder.
+
+3. **Copy the compiled DLL**
+   - Copy the release DLL to:
      ```
      %LOCALAPPDATA%\NINA\Plugins\3.0.0\StarSentinel\
      ```
-   - If you build the project from Visual Studio, the `Directory.Build.targets` file already copies the versioned DLL into the N.I.N.A. plugin folder automatically.
 
 4. **Restart N.I.N.A.**
    - Launch N.I.N.A. and verify that **Star Sentinel** appears in the Plugins list.
