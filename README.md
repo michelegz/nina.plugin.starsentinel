@@ -65,7 +65,7 @@ The plugin version is generated automatically during the build from Git tags.
 
 * The latest tag is read from `git describe --tags --abbrev=0`.
 * The commit count since that tag is appended to the version.
-* The final assembly/file version format is `Major.Minor.Patch.BuildNumber`.
+* The final assembly/file version format is `Major.Minor.Patch.CommitsSinceTag`.
 
 To create a new release, tag a commit with the desired semantic version, for example:
 
