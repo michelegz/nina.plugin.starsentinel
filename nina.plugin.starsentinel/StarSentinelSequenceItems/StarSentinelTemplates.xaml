@@ -54,9 +54,7 @@
                                 Text="{Binding AbsStarCountThreshold}"
                                 ToolTip="Absolute star count threshold, set to 0 to disable absolute evaluation" />
                         </StackPanel>
-                        <StackPanel
-                            Margin="5,0,10,0"
-                            Orientation="Horizontal">
+                        <StackPanel Margin="5,0,10,0" Orientation="Horizontal">
                             <StackPanel.Style>
                                 <Style TargetType="StackPanel">
                                     <Setter Property="Visibility" Value="Collapsed" />
@@ -68,9 +66,9 @@
                                 </Style>
                             </StackPanel.Style>
                             <TextBlock
+                                Margin="0,0,5,0"
                                 VerticalAlignment="Center"
-                                Text="Test mode"
-                                Margin="0,0,5,0" />
+                                Text="Test mode" />
                             <CheckBox
                                 VerticalAlignment="Center"
                                 IsChecked="{Binding TestMode}"
@@ -124,17 +122,23 @@
 
     <!--  The definition of the test condition plugin style in the mini format on the imaging tab  -->
     <!--  The Key has to be defined as the fully qualified instruction name and the "_Mini" postfix  -->
-    <DataTemplate x:Key="Michelegz.NINA.StarSentinel.StarSentinelCategory.StarSentinelCondition_Mini">
-        <mini:MiniSequenceItem>
-            <mini:MiniSequenceItem.SequenceItemContent>
+    <DataTemplate x:Key="Michelegz.NINA.StarSentinel.StarSentinelCategory.StarCountCondition_Mini">
+        <mini:MiniCondition>
+            <mini:MiniCondition.ConditionProgressContent>
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock VerticalAlignment="Center" Text="Bad Frames" />
+                    <TextBlock VerticalAlignment="Center" Text="Stars:" />
                     <TextBlock
-                        Margin="5,0,0,0"
+                        Margin="5,0,10,0"
+                        VerticalAlignment="Center"
+                        Text="{Binding RelativeStarCountText}"
+                        ToolTip="Last frame percentage of stars compared to reference" />
+                    <TextBlock VerticalAlignment="Center" Text="| Bad:" />
+                    <TextBlock
+                        Margin="5,0,10,0"
                         VerticalAlignment="Center"
                         Text="{Binding BadFrames}" />
                 </StackPanel>
-            </mini:MiniSequenceItem.SequenceItemContent>
-        </mini:MiniSequenceItem>
+            </mini:MiniCondition.ConditionProgressContent>
+        </mini:MiniCondition>
     </DataTemplate>
 </ResourceDictionary>
